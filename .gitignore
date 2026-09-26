@@ -1,0 +1,10 @@
+/target/
+/frontend/node_modules/
+/frontend/dist/
+/.tools/
+/src-tauri/gen/schemas/
+*.log
+.DS_Store
+.idea/
+.vscode/
+

@@ -1,0 +1,17 @@
+[package]
+name = "branchcraft-test-support"
+description = "Reusable Git fixtures for Branchcraft tests"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+git2.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true
+

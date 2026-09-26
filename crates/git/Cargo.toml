@@ -1,0 +1,20 @@
+[package]
+name = "branchcraft-git"
+description = "Git service implementation for Branchcraft"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+branchcraft-app-core = { path = "../app-core" }
+git2.workspace = true
+
+[dev-dependencies]
+branchcraft-test-support = { path = "../test-support" }
+tempfile.workspace = true
+
+[lints]
+workspace = true
+

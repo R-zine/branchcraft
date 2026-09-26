@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libssl-dev libxdo-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - run: cargo test --workspace
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  fedora-build:
+    name: Fedora desktop build
+    runs-on: ubuntu-24.04
+    container: fedora:latest
+    steps:
+      - name: Install Fedora build dependencies
+        run: |
+          dnf install -y git curl gcc gcc-c++ make nodejs npm \
+            webkit2gtk4.1-devel openssl-devel wget file \
+            libappindicator-gtk3-devel librsvg2-devel libxdo-devel
+      - uses: actions/checkout@v4
+      - name: Install stable Rust
+        run: |
+          export CARGO_HOME=/opt/branchcraft-cargo
+          export RUSTUP_HOME=/opt/branchcraft-rustup
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+            | sh -s -- -y --profile minimal --default-toolchain stable
+          echo "/opt/branchcraft-cargo/bin" >> "$GITHUB_PATH"
+          echo "CARGO_HOME=/opt/branchcraft-cargo" >> "$GITHUB_ENV"
+          echo "RUSTUP_HOME=/opt/branchcraft-rustup" >> "$GITHUB_ENV"
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Build Branchcraft
+        run: cargo build -p branchcraft --locked
+
