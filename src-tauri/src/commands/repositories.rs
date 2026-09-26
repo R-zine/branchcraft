@@ -1,7 +1,8 @@
+use super::task_error;
 use crate::AppState;
-use branchcraft_app_core::{GitError, GitErrorKind, RepositorySnapshot};
+use branchcraft_app_core::{GitError, RepositorySnapshot};
 use serde::Deserialize;
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 use tauri::State;
 
 #[derive(Debug, Deserialize)]
@@ -31,13 +32,3 @@ pub async fn refresh_repository(
         .await
         .map_err(|_| task_error())?
 }
-
-fn task_error() -> GitError {
-    GitError::new(
-        GitErrorKind::Unknown,
-        "Branchcraft could not finish reading this repository.",
-        Some("The background Git task stopped unexpectedly.".to_owned()),
-    )
-}
-
-use std::sync::Arc;

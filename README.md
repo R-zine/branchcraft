@@ -3,11 +3,11 @@
 Branchcraft is a fast, focused desktop Git client for Linux, built with Rust,
 Tauri, and React.
 
-The current implementation completes Milestones 0 and 1: it opens an existing
-local Git repository through a native directory picker and shows the repository
-name, path, active branch, and changed files. Git operations live in an
-independently tested Rust crate; the React UI talks to it only through typed
-Tauri service wrappers.
+The current implementation completes Milestones 0 through 2: it opens an
+existing local Git repository through a native directory picker, shows its
+working-tree changes, and renders the selected file in a Monaco diff editor.
+Git operations live in an independently tested Rust crate; the React UI talks
+to it only through typed Tauri service wrappers.
 
 ## Quick start on Fedora
 
@@ -48,8 +48,9 @@ instructions.
 ## Project status
 
 - Implemented: workspace foundation, Tauri shell, React UI, native folder
-  picker, repository opening, current branch, working-tree status, tests, CI.
-- Next: structured file diffs and the Monaco diff viewer (Milestone 2).
+  picker, repository opening, current branch, working-tree status, structured
+  file diffs, responsive Monaco split/inline viewing, tests, and CI.
+- Next: file staging and commit creation (Milestone 3).
 - Not yet implemented: staging, commits, history, branch management, GitHub
   OAuth, remote operations, cloning, and production packaging polish.
 

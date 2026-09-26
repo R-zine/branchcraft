@@ -3,9 +3,9 @@
 ## Scope
 
 This document records the foundation selected on 2026-09-26 and the
-Milestones 0–1 implementation. The application is an offline-capable local Git
-client at this stage. OAuth, secrets, network Git, cloning, and Monaco are not
-part of the compiled application yet.
+Milestones 0–2 implementation. The application is an offline-capable local Git
+client with bounded, structured local-change diffs. OAuth, secrets, network
+Git, and cloning are not part of the compiled application yet.
 
 ## Dependency baseline
 
@@ -21,7 +21,7 @@ registries before implementation.
 | TypeScript | 6.0.3, strict mode | TypeScript 7.0.2 was inspected as the current release, but the maintained TypeScript ESLint 8.70 parser supports `<6.1`. The newest supported stable line avoids forcing an unsupported lint stack. |
 | Vite | 8.3.1 | Current stable lightweight frontend toolchain. |
 | git2 | 0.21.0 | Current maintained safe Rust bindings to libgit2, matching the requested initial implementation. |
-| Monaco Editor | 0.57.0, deferred | Current stable version researched now, but deliberately deferred to Milestone 2 to avoid shipping unused weight. |
+| Monaco Editor | 0.57.0 | Current stable editor line; isolated behind a feature adapter and lazy-loaded only for previewable text diffs. |
 | keyring | 4.2.0, deferred | Maintained Secret Service-compatible option for Fedora. It will be introduced with the storage/auth milestones, not linked before secrets exist. |
 
 Sources: [Rust release notes](https://doc.rust-lang.org/releases.html),
@@ -67,19 +67,39 @@ validates it before opening the directory. Repository inspection runs on a
 blocking worker so filesystem/libgit2 work cannot stall the webview event loop.
 Only structured domain results or user-safe `GitError` values cross IPC.
 
+The diff path extends the same boundary without coupling the repository hook to
+Monaco:
+
+```text
+selected FileStatus
+        |
+        v
+useFileDiff -> DiffService -> Tauri diff command
+        |                          |
+        |                          v
+        |                    GitService::diff
+        |                          |
+        v                          v
+DiffViewer -> Monaco adapter    libgit2 + bounded file reads
+```
+
+Monaco is a lazy frontend chunk. Binary, oversized, and unsupported files do
+not load it and receive dedicated fallback UI.
+
 ## Rust workspace ownership
 
 ### `branchcraft-app-core`
 
 Owns serializable domain models: repository identity, branch state, per-file
-index/worktree status, and safe error categories. It has no dependency on Git,
-Tauri, or a platform secret store.
+index/worktree status, structured file diffs, and safe error categories. It has
+no dependency on Git, Tauri, Monaco, or a platform secret store.
 
 ### `branchcraft-git`
 
 Owns `GitService` and the libgit2 implementation. It opens a canonical path,
-detects normal/detached/unborn HEAD states, and preserves the staged and
-unstaged status of each file independently. It has no knowledge of IPC or UI.
+detects normal/detached/unborn HEAD states, preserves staged and unstaged status
+independently, and generates bounded `HEAD`-to-worktree file diffs. It has no
+knowledge of IPC or UI.
 
 ### `branchcraft-test-support`
 
@@ -96,8 +116,11 @@ and testable. The native dialog permission is explicitly limited to opening.
 
 - `features/repositories` owns repository loading and header/welcome UI.
 - `features/changes` owns file status presentation and selection.
-- `services/repositoryService.ts` is the sole raw `invoke()` boundary.
-- `types/repository.ts` mirrors the serde IPC contract.
+- `features/diff` owns diff loading, fallback states, responsive layout, and the
+  Monaco adapter.
+- `services/repositoryService.ts` and `services/diffService.ts` are the only raw
+  `invoke()` boundaries.
+- `types/repository.ts` and `types/diff.ts` mirror the serde IPC contracts.
 - `components` contains presentation-only primitives, not domain behavior.
 
 There is no global state object. The selected repository and file currently
@@ -111,9 +134,13 @@ own state rather than expanding a universal store.
 - There is no shell execution.
 - libgit2 opens exactly the selected directory; it does not search arbitrary
   parents.
+- Diff paths must be ordinary relative paths. The backend rejects traversal and
+  prevents resolved working-tree files from escaping the repository root.
+- Diff content is capped at 2 MiB per side and binary/unsupported content never
+  crosses IPC.
 - Raw libgit2 errors are mapped to structured categories instead of being shown
   or logged verbatim.
-- No credential system is active in Milestones 0–1. When introduced, the auth
+- No credential system is active in Milestones 0–2. When introduced, the auth
   crate will receive only a `SecretStore` abstraction backed by Secret Service;
   access tokens will never enter frontend models or Git remote URLs.
 

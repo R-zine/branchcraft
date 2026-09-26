@@ -1,7 +1,10 @@
 //! Git operations for Branchcraft, isolated from the desktop shell.
 
+mod diff;
+
 use branchcraft_app_core::{
-    BranchInfo, ChangeKind, FileStatus, GitError, GitErrorKind, RepositoryId, RepositorySnapshot,
+    BranchInfo, ChangeKind, Diff, FileStatus, GitError, GitErrorKind, RepositoryId,
+    RepositorySnapshot,
 };
 use git2::{ErrorClass, ErrorCode, Repository, Status, StatusOptions};
 use std::{fs, io, path::Path};
@@ -23,6 +26,14 @@ pub trait GitService: Send + Sync {
     /// Returns a structured error when the repository disappears, becomes
     /// inaccessible, or cannot be inspected.
     fn repository_status(&self, path: &Path) -> Result<RepositorySnapshot, GitError>;
+
+    /// Produces a bounded diff for one changed repository-relative path.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when the repository or path is invalid, the
+    /// file is no longer changed, or libgit2 cannot compare the content.
+    fn diff(&self, path: &Path, file_path: &str) -> Result<Diff, GitError>;
 }
 
 /// libgit2-backed implementation of [`GitService`].
@@ -76,7 +87,13 @@ impl GitService for LibGitService {
     fn repository_status(&self, path: &Path) -> Result<RepositorySnapshot, GitError> {
         Self::snapshot(path)
     }
+
+    fn diff(&self, path: &Path, file_path: &str) -> Result<Diff, GitError> {
+        diff::file_diff(path, file_path)
+    }
 }
+
+pub use diff::MAX_DIFF_FILE_BYTES;
 
 fn canonical_directory(path: &Path) -> Result<std::path::PathBuf, GitError> {
     if path.as_os_str().is_empty() {

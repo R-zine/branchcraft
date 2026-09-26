@@ -14,6 +14,8 @@ export default defineConfig({
   build: {
     target: "es2022",
     sourcemap: true,
+    // Monaco is isolated from startup and currently emits a 2.7 MB lazy chunk.
+    chunkSizeWarningLimit: 3000,
   },
   test: {
     environment: "jsdom",

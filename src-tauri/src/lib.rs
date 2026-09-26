@@ -26,6 +26,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
+            commands::diffs::get_file_diff,
             commands::repositories::open_repository,
             commands::repositories::refresh_repository
         ])

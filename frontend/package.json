@@ -11,8 +11,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@monaco-editor/react": "4.7.0",
     "@tauri-apps/api": "2.11.1",
     "@tauri-apps/plugin-dialog": "2.7.3",
+    "monaco-editor": "0.57.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },

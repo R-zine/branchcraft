@@ -1,6 +1,6 @@
 import { ErrorBanner } from "../components/ErrorBanner";
 import { ChangesPanel } from "../features/changes/ChangesPanel";
-import { FileInspectorPlaceholder } from "../features/changes/FileInspectorPlaceholder";
+import { DiffViewer } from "../features/diff/DiffViewer";
 import { RepositoryHeader } from "../features/repositories/RepositoryHeader";
 import { useRepository } from "../features/repositories/useRepository";
 import { WelcomeView } from "../features/repositories/WelcomeView";
@@ -8,13 +8,16 @@ import {
   tauriRepositoryService,
   type RepositoryService,
 } from "../services/repositoryService";
+import { tauriDiffService, type DiffService } from "../services/diffService";
 
 interface AppProps {
   repositoryService?: RepositoryService;
+  diffService?: DiffService;
 }
 
 export function App({
   repositoryService = tauriRepositoryService,
+  diffService = tauriDiffService,
 }: AppProps) {
   const state = useRepository(repositoryService);
   const selectedFile =
@@ -50,7 +53,11 @@ export function App({
             selectedPath={state.selectedPath}
             onSelect={state.selectPath}
           />
-          <FileInspectorPlaceholder file={selectedFile} />
+          <DiffViewer
+            repositoryPath={state.repository.path}
+            file={selectedFile}
+            service={diffService}
+          />
         </main>
       )}
 

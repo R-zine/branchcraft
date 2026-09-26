@@ -50,6 +50,15 @@ impl TestRepository {
     ///
     /// Panics if the parent directory or file cannot be written.
     pub fn write(&self, relative_path: &str, contents: &str) {
+        self.write_bytes(relative_path, contents.as_bytes());
+    }
+
+    /// Writes a binary fixture file relative to the repository root.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the parent directory or file cannot be written.
+    pub fn write_bytes(&self, relative_path: &str, contents: &[u8]) {
         let path = self.path().join(relative_path);
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).expect("create fixture parent directory");
