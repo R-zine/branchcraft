@@ -236,3 +236,64 @@ impl GitError {
         }
     }
 }
+
+/// Public GitHub profile information safe to expose to the frontend.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Account {
+    pub id: u64,
+    pub login: String,
+    pub name: Option<String>,
+    pub avatar_url: String,
+    pub profile_url: String,
+}
+
+/// Authentication state returned to the frontend without credentials.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "state")]
+pub enum AuthStatus {
+    Unconfigured,
+    SignedOut,
+    SignedIn { account: Account },
+}
+
+/// Error categories that authentication recovery UI can act on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AuthErrorKind {
+    NotConfigured,
+    NotAuthenticated,
+    AlreadyInProgress,
+    ListenerUnavailable,
+    BrowserUnavailable,
+    Cancelled,
+    StateMismatch,
+    AuthorizationDenied,
+    TokenExchange,
+    Network,
+    AuthenticationExpired,
+    CredentialStore,
+    InvalidResponse,
+    Unknown,
+}
+
+/// A safe authentication error that never contains OAuth credentials.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Error)]
+#[error("{summary}")]
+#[serde(rename_all = "camelCase")]
+pub struct AuthError {
+    pub kind: AuthErrorKind,
+    pub summary: String,
+    pub detail: Option<String>,
+}
+
+impl AuthError {
+    #[must_use]
+    pub fn new(kind: AuthErrorKind, summary: impl Into<String>, detail: Option<String>) -> Self {
+        Self {
+            kind,
+            summary: summary.into(),
+            detail,
+        }
+    }
+}

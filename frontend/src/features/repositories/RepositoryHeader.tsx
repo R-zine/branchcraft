@@ -7,6 +7,7 @@ interface RepositoryHeaderProps {
   repository: RepositorySnapshot | null;
   loading: boolean;
   branchControl: ReactNode;
+  accountControl: ReactNode;
   onOpen: () => void;
   onRefresh: () => void;
 }
@@ -15,6 +16,7 @@ export function RepositoryHeader({
   repository,
   loading,
   branchControl,
+  accountControl,
   onOpen,
   onRefresh,
 }: RepositoryHeaderProps) {
@@ -48,6 +50,8 @@ export function RepositoryHeader({
         <Icon name="refresh" />
         <span>{loading ? "Refreshing…" : "Refresh"}</span>
       </button>
+
+      {accountControl}
     </header>
   );
 }

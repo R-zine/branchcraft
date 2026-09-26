@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { AuthService } from "../services/authService";
 import type { DiffService } from "../services/diffService";
 import type { RepositoryService } from "../services/repositoryService";
 import type { StagingService } from "../services/stagingService";
@@ -44,6 +45,15 @@ const fileDiff: FileDiff = {
 function diffService(): DiffService {
   return {
     getFileDiff: vi.fn().mockResolvedValue(fileDiff),
+  };
+}
+
+function authService(): AuthService {
+  return {
+    getStatus: vi.fn().mockResolvedValue({ state: "signedOut" }),
+    login: vi.fn(),
+    cancelLogin: vi.fn(),
+    logout: vi.fn(),
   };
 }
 
@@ -97,6 +107,7 @@ describe("Branchcraft app", () => {
     const { repositoryService, openRepository } = service();
     render(
       <App
+        authService={authService()}
         repositoryService={repositoryService}
         diffService={diffService()}
       />,
@@ -118,6 +129,7 @@ describe("Branchcraft app", () => {
     chooseDirectory.mockResolvedValue(null);
     render(
       <App
+        authService={authService()}
         repositoryService={repositoryService}
         diffService={diffService()}
       />,
@@ -139,6 +151,7 @@ describe("Branchcraft app", () => {
     const staging = stagingService();
     render(
       <App
+        authService={authService()}
         repositoryService={repositoryService}
         diffService={diffService()}
         stagingService={staging.service}

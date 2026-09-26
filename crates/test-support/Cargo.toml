@@ -9,7 +9,10 @@ repository.workspace = true
 publish = false
 
 [dependencies]
+async-trait.workspace = true
+branchcraft-storage = { path = "../storage" }
 git2.workspace = true
+secrecy.workspace = true
 tempfile.workspace = true
 
 [lints]

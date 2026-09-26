@@ -1,0 +1,22 @@
+[package]
+name = "branchcraft-github"
+description = "GitHub HTTP API integration for Branchcraft"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+branchcraft-app-core = { path = "../app-core" }
+reqwest.workspace = true
+secrecy.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+
+[lints]
+workspace = true

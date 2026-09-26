@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod branches;
 pub mod commits;
 pub mod diffs;

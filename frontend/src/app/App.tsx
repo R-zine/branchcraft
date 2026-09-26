@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ErrorBanner } from "../components/ErrorBanner";
+import { AccountMenu } from "../features/auth/AccountMenu";
 import { BranchPicker } from "../features/branches/BranchPicker";
 import { ChangesPanel } from "../features/changes/ChangesPanel";
 import { useStaging } from "../features/changes/useStaging";
@@ -9,6 +10,7 @@ import { HistoryPanel } from "../features/history/HistoryPanel";
 import { RepositoryHeader } from "../features/repositories/RepositoryHeader";
 import { useRepository } from "../features/repositories/useRepository";
 import { WelcomeView } from "../features/repositories/WelcomeView";
+import { tauriAuthService, type AuthService } from "../services/authService";
 import { tauriCommitService, type CommitService } from "../services/commitService";
 import { tauriBranchService, type BranchService } from "../services/branchService";
 import { tauriDiffService, type DiffService } from "../services/diffService";
@@ -23,6 +25,7 @@ import {
 } from "../services/stagingService";
 
 interface AppProps {
+  authService?: AuthService;
   repositoryService?: RepositoryService;
   diffService?: DiffService;
   stagingService?: StagingService;
@@ -32,6 +35,7 @@ interface AppProps {
 }
 
 export function App({
+  authService = tauriAuthService,
   repositoryService = tauriRepositoryService,
   diffService = tauriDiffService,
   stagingService = tauriStagingService,
@@ -64,6 +68,7 @@ export function App({
             onUpdated={state.updateRepository}
           />
         }
+        accountControl={<AccountMenu service={authService} />}
         onOpen={() => void state.openRepository()}
         onRefresh={() => void state.refreshRepository()}
       />

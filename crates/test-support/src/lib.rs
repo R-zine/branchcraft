@@ -1,8 +1,60 @@
 //! Temporary repository fixtures shared by Branchcraft backend tests.
 
+use async_trait::async_trait;
+use branchcraft_storage::{SecretStore, StorageError};
 use git2::{IndexAddOption, Repository, Signature};
-use std::{fs, path::Path};
+use secrecy::SecretString;
+use std::{collections::HashMap, fs, path::Path, sync::Mutex};
 use tempfile::TempDir;
+
+/// In-memory credential store for offline authentication tests.
+#[derive(Debug, Default)]
+pub struct MemorySecretStore {
+    secrets: Mutex<HashMap<String, SecretString>>,
+}
+
+impl MemorySecretStore {
+    /// Returns whether a value is stored without exposing it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a previous test poisoned the in-memory store lock.
+    #[must_use]
+    pub fn contains(&self, key: &str) -> bool {
+        self.secrets
+            .lock()
+            .expect("memory secret store lock")
+            .contains_key(key)
+    }
+}
+
+#[async_trait]
+impl SecretStore for MemorySecretStore {
+    async fn get(&self, key: &str) -> Result<Option<SecretString>, StorageError> {
+        Ok(self
+            .secrets
+            .lock()
+            .map_err(|_| StorageError::Unknown)?
+            .get(key)
+            .cloned())
+    }
+
+    async fn set(&self, key: &str, secret: &SecretString) -> Result<(), StorageError> {
+        self.secrets
+            .lock()
+            .map_err(|_| StorageError::Unknown)?
+            .insert(key.to_owned(), secret.clone());
+        Ok(())
+    }
+
+    async fn delete(&self, key: &str) -> Result<(), StorageError> {
+        self.secrets
+            .lock()
+            .map_err(|_| StorageError::Unknown)?
+            .remove(key);
+        Ok(())
+    }
+}
 
 pub struct TestRepository {
     directory: TempDir,

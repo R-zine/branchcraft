@@ -21,10 +21,15 @@ tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 branchcraft-app-core = { path = "../crates/app-core" }
+branchcraft-auth = { path = "../crates/auth" }
 branchcraft-git = { path = "../crates/git" }
+branchcraft-github = { path = "../crates/github" }
+branchcraft-storage = { path = "../crates/storage" }
 serde.workspace = true
 tauri = { version = "2.11.6", features = [] }
 tauri-plugin-dialog = "2.7.3"
+tauri-plugin-opener = "2.5.5"
+url.workspace = true
 
 [lints]
 workspace = true

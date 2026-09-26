@@ -7,7 +7,7 @@ Tauri 2 uses WebKitGTK 4.1. Install the official Fedora prerequisites:
 ```bash
 sudo dnf check-update
 sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file \
-  libappindicator-gtk3-devel librsvg2-devel libxdo-devel
+  libappindicator-gtk3-devel librsvg2-devel libxdo-devel gnome-keyring
 sudo dnf group install "c-development"
 ```
 
@@ -48,6 +48,19 @@ network or modify global Git configuration.
 
 ## Run
 
+For GitHub sign-in, create a GitHub OAuth App with the callback URL
+`http://127.0.0.1/oauth/callback`, then export its application configuration:
+
+```bash
+export BRANCHCRAFT_GITHUB_CLIENT_ID=your_client_id
+export BRANCHCRAFT_GITHUB_CLIENT_SECRET=your_client_secret
+```
+
+GitHub currently requires the client secret during OAuth App token exchange,
+even for native apps using PKCE. It is public application configuration in a
+desktop binary, not a confidential secret. See [auth.md](auth.md) for the flow,
+security properties, and packaging guidance.
+
 ```bash
 cargo install tauri-cli --version '^2.11' --locked
 cargo tauri dev --config src-tauri/tauri.conf.json
@@ -63,6 +76,11 @@ The package is written below `target/release/bundle/rpm`. The application ID is
 currently the explicit placeholder `io.github.username.Branchcraft`; replace the
 `username` segment in `src-tauri/tauri.conf.json` when the final GitHub owner is
 known.
+
+The desktop session must provide a Secret Service implementation. Fedora GNOME
+normally starts GNOME Keyring automatically. If the keyring is locked or
+unavailable, local Git features continue to work and the account menu presents
+a recoverable credential-store error.
 
 ## Wayland
 

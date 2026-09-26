@@ -1,0 +1,30 @@
+[package]
+name = "branchcraft-auth"
+description = "GitHub OAuth authentication for Branchcraft"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+base64.workspace = true
+branchcraft-app-core = { path = "../app-core" }
+branchcraft-github = { path = "../github" }
+branchcraft-storage = { path = "../storage" }
+rand.workspace = true
+reqwest.workspace = true
+secrecy.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+tokio.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+branchcraft-test-support = { path = "../test-support" }
+
+[lints]
+workspace = true
