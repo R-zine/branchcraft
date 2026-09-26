@@ -1,8 +1,8 @@
 //! GitHub-specific HTTP API operations for Branchcraft.
 
 use async_trait::async_trait;
-use branchcraft_app_core::Account;
-use reqwest::{Client, StatusCode, Url};
+use branchcraft_app_core::{Account, GitHubRepository, GitHubRepositoryList};
+use reqwest::{Client, StatusCode, Url, redirect::Policy};
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 use std::time::Duration;
@@ -10,6 +10,9 @@ use thiserror::Error;
 
 const API_VERSION: &str = "2026-03-10";
 const DEFAULT_USER_ENDPOINT: &str = "https://api.github.com/user";
+const DEFAULT_REPOSITORIES_ENDPOINT: &str = "https://api.github.com/user/repos";
+const REPOSITORIES_PER_PAGE: usize = 100;
+const MAX_REPOSITORY_PAGES: usize = 10;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
 pub enum GitHubError {
@@ -29,12 +32,20 @@ pub enum GitHubError {
 pub trait GitHubService: Send + Sync {
     /// Retrieves and validates the identity represented by `access_token`.
     async fn current_user(&self, access_token: &SecretString) -> Result<Account, GitHubError>;
+
+    /// Lists repositories the authenticated user can access, newest activity
+    /// first and bounded to avoid an unbounded desktop response.
+    async fn repositories(
+        &self,
+        access_token: &SecretString,
+    ) -> Result<GitHubRepositoryList, GitHubError>;
 }
 
 #[derive(Clone)]
 pub struct ReqwestGitHubService {
     client: Client,
     user_endpoint: Url,
+    repositories_endpoint: Url,
 }
 
 impl ReqwestGitHubService {
@@ -45,7 +56,7 @@ impl ReqwestGitHubService {
     /// Returns [`GitHubError::InvalidResponse`] if a fixed endpoint or the HTTP
     /// client cannot be initialized.
     pub fn new() -> Result<Self, GitHubError> {
-        Self::with_user_endpoint(DEFAULT_USER_ENDPOINT)
+        Self::with_endpoints(DEFAULT_USER_ENDPOINT, DEFAULT_REPOSITORIES_ENDPOINT)
     }
 
     /// Creates a client with an alternate endpoint for isolated tests.
@@ -54,26 +65,53 @@ impl ReqwestGitHubService {
     ///
     /// Returns [`GitHubError::InvalidResponse`] for an invalid endpoint.
     pub fn with_user_endpoint(endpoint: &str) -> Result<Self, GitHubError> {
+        let user_endpoint = Url::parse(endpoint).map_err(|_| GitHubError::InvalidResponse)?;
+        let mut repositories_endpoint = user_endpoint.clone();
+        repositories_endpoint.set_path("/user/repos");
+        repositories_endpoint.set_query(None);
+        repositories_endpoint.set_fragment(None);
+        Self::from_endpoints(user_endpoint, repositories_endpoint)
+    }
+
+    /// Creates a client with alternate user and repository endpoints for
+    /// isolated tests.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GitHubError::InvalidResponse`] for invalid endpoints.
+    pub fn with_endpoints(
+        user_endpoint: &str,
+        repositories_endpoint: &str,
+    ) -> Result<Self, GitHubError> {
+        let user_endpoint = Url::parse(user_endpoint).map_err(|_| GitHubError::InvalidResponse)?;
+        let repositories_endpoint =
+            Url::parse(repositories_endpoint).map_err(|_| GitHubError::InvalidResponse)?;
+        Self::from_endpoints(user_endpoint, repositories_endpoint)
+    }
+
+    fn from_endpoints(user_endpoint: Url, repositories_endpoint: Url) -> Result<Self, GitHubError> {
         let client = Client::builder()
+            .redirect(Policy::none())
             .connect_timeout(Duration::from_secs(10))
             .timeout(Duration::from_secs(30))
             .user_agent("Branchcraft/0.1")
             .build()
             .map_err(|_| GitHubError::InvalidResponse)?;
-        let user_endpoint = Url::parse(endpoint).map_err(|_| GitHubError::InvalidResponse)?;
         Ok(Self {
             client,
             user_endpoint,
+            repositories_endpoint,
         })
     }
-}
 
-#[async_trait]
-impl GitHubService for ReqwestGitHubService {
-    async fn current_user(&self, access_token: &SecretString) -> Result<Account, GitHubError> {
+    async fn authenticated_get(
+        &self,
+        endpoint: Url,
+        access_token: &SecretString,
+    ) -> Result<reqwest::Response, GitHubError> {
         let response = self
             .client
-            .get(self.user_endpoint.clone())
+            .get(endpoint)
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", API_VERSION)
             .bearer_auth(access_token.expose_secret())
@@ -82,17 +120,62 @@ impl GitHubService for ReqwestGitHubService {
             .map_err(|_| GitHubError::Network)?;
 
         match response.status() {
-            StatusCode::UNAUTHORIZED => return Err(GitHubError::Unauthorized),
-            StatusCode::FORBIDDEN => return Err(GitHubError::Forbidden),
-            status if !status.is_success() => return Err(GitHubError::Api),
-            _ => {}
+            StatusCode::UNAUTHORIZED => Err(GitHubError::Unauthorized),
+            StatusCode::FORBIDDEN => Err(GitHubError::Forbidden),
+            status if !status.is_success() => Err(GitHubError::Api),
+            _ => Ok(response),
         }
+    }
+}
 
-        response
+#[async_trait]
+impl GitHubService for ReqwestGitHubService {
+    async fn current_user(&self, access_token: &SecretString) -> Result<Account, GitHubError> {
+        self.authenticated_get(self.user_endpoint.clone(), access_token)
+            .await?
             .json::<GitHubUser>()
             .await
             .map(Account::from)
             .map_err(|_| GitHubError::InvalidResponse)
+    }
+
+    async fn repositories(
+        &self,
+        access_token: &SecretString,
+    ) -> Result<GitHubRepositoryList, GitHubError> {
+        let mut repositories = Vec::new();
+        for page in 1..=MAX_REPOSITORY_PAGES {
+            let mut endpoint = self.repositories_endpoint.clone();
+            endpoint
+                .query_pairs_mut()
+                .append_pair("per_page", &REPOSITORIES_PER_PAGE.to_string())
+                .append_pair("page", &page.to_string())
+                .append_pair("sort", "pushed")
+                .append_pair("direction", "desc");
+            let response = self.authenticated_get(endpoint, access_token).await?;
+            let page_repositories = response
+                .json::<Vec<GitHubRepositoryResponse>>()
+                .await
+                .map_err(|_| GitHubError::InvalidResponse)?;
+            let page_len = page_repositories.len();
+            repositories.extend(
+                page_repositories
+                    .into_iter()
+                    .map(GitHubRepository::try_from)
+                    .collect::<Result<Vec<_>, _>>()?,
+            );
+            if page_len < REPOSITORIES_PER_PAGE {
+                return Ok(GitHubRepositoryList {
+                    repositories,
+                    truncated: false,
+                });
+            }
+        }
+
+        Ok(GitHubRepositoryList {
+            repositories,
+            truncated: true,
+        })
     }
 }
 
@@ -105,6 +188,27 @@ struct GitHubUser {
     html_url: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct GitHubRepositoryResponse {
+    id: u64,
+    name: String,
+    full_name: String,
+    owner: GitHubRepositoryOwner,
+    description: Option<String>,
+    private: bool,
+    fork: bool,
+    archived: bool,
+    clone_url: String,
+    default_branch: String,
+    language: Option<String>,
+    updated_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GitHubRepositoryOwner {
+    login: String,
+}
+
 impl From<GitHubUser> for Account {
     fn from(user: GitHubUser) -> Self {
         Self {
@@ -114,6 +218,42 @@ impl From<GitHubUser> for Account {
             avatar_url: user.avatar_url,
             profile_url: user.html_url,
         }
+    }
+}
+
+impl TryFrom<GitHubRepositoryResponse> for GitHubRepository {
+    type Error = GitHubError;
+
+    fn try_from(repository: GitHubRepositoryResponse) -> Result<Self, Self::Error> {
+        let clone_url =
+            Url::parse(&repository.clone_url).map_err(|_| GitHubError::InvalidResponse)?;
+        let valid_clone_url = clone_url.scheme() == "https"
+            && clone_url
+                .host_str()
+                .is_some_and(|host| host.eq_ignore_ascii_case("github.com"))
+            && clone_url.port_or_known_default() == Some(443)
+            && clone_url.username().is_empty()
+            && clone_url.password().is_none()
+            && clone_url.query().is_none()
+            && clone_url.fragment().is_none();
+        if !valid_clone_url {
+            return Err(GitHubError::InvalidResponse);
+        }
+
+        Ok(Self {
+            id: repository.id,
+            name: repository.name,
+            full_name: repository.full_name,
+            owner_login: repository.owner.login,
+            description: repository.description,
+            private: repository.private,
+            fork: repository.fork,
+            archived: repository.archived,
+            clone_url: clone_url.to_string(),
+            default_branch: repository.default_branch,
+            language: repository.language,
+            updated_at: repository.updated_at,
+        })
     }
 }
 
@@ -177,6 +317,47 @@ mod tests {
         request.join().expect("mock server");
 
         assert_eq!(error, GitHubError::Unauthorized);
+    }
+
+    #[tokio::test]
+    async fn lists_accessible_repositories_from_an_offline_mock() {
+        let body = r#"[
+          {
+            "id": 7,
+            "name": "branchcraft",
+            "full_name": "branchcrafter/branchcraft",
+            "owner": { "login": "branchcrafter" },
+            "description": "A focused Git client",
+            "private": true,
+            "fork": false,
+            "archived": false,
+            "clone_url": "https://github.com/branchcrafter/branchcraft.git",
+            "default_branch": "main",
+            "language": "Rust",
+            "updated_at": "2026-09-25T10:00:00Z"
+          }
+        ]"#;
+        let (endpoint, request) = mock_endpoint("200 OK", body);
+        let service =
+            ReqwestGitHubService::with_endpoints(&endpoint, &endpoint).expect("GitHub client");
+
+        let repositories = service
+            .repositories(&SecretString::from("test-access-token"))
+            .await
+            .expect("repository listing");
+        let request = request.join().expect("mock server").to_ascii_lowercase();
+
+        assert!(!repositories.truncated);
+        assert_eq!(repositories.repositories.len(), 1);
+        assert_eq!(
+            repositories.repositories[0].full_name,
+            "branchcrafter/branchcraft"
+        );
+        assert!(repositories.repositories[0].private);
+        assert!(request.starts_with("get /user?"));
+        assert!(request.contains("per_page=100"));
+        assert!(request.contains("sort=pushed"));
+        assert!(request.contains("authorization: bearer test-access-token\r\n"));
     }
 
     fn mock_endpoint(status: &str, body: &str) -> (String, JoinHandle<String>) {

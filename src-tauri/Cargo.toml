@@ -4,6 +4,7 @@ description = "A fast, focused desktop Git client for Linux"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+authors.workspace = true
 license.workspace = true
 repository.workspace = true
 default-run = "branchcraft"
@@ -25,6 +26,7 @@ branchcraft-auth = { path = "../crates/auth" }
 branchcraft-git = { path = "../crates/git" }
 branchcraft-github = { path = "../crates/github" }
 branchcraft-storage = { path = "../crates/storage" }
+log = "0.4.34"
 serde.workspace = true
 secrecy.workspace = true
 tauri = { version = "2.11.6", features = [] }

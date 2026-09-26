@@ -14,6 +14,7 @@ members = [
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
+authors = ["Branchcraft contributors"]
 license = "MIT"
 repository = "https://github.com/<username>/branchcraft"
 
@@ -40,4 +41,11 @@ unsafe_code = "forbid"
 [workspace.lints.clippy]
 all = "deny"
 pedantic = "deny"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+opt-level = 3
+panic = "abort"
+strip = "symbols"
 

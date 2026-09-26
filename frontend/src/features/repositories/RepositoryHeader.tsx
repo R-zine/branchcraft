@@ -9,6 +9,7 @@ interface RepositoryHeaderProps {
   branchControl: ReactNode;
   remoteControl: ReactNode;
   accountControl: ReactNode;
+  onSettings: () => void;
   onOpen: () => void;
   onRefresh: () => void;
 }
@@ -19,6 +20,7 @@ export function RepositoryHeader({
   branchControl,
   remoteControl,
   accountControl,
+  onSettings,
   onOpen,
   onRefresh,
 }: RepositoryHeaderProps) {
@@ -29,7 +31,12 @@ export function RepositoryHeader({
         <span>Branchcraft</span>
       </div>
 
-      <button className="repository-switcher" type="button" onClick={onOpen}>
+      <button
+        className="repository-switcher"
+        type="button"
+        title="Open repository (Ctrl+O)"
+        onClick={onOpen}
+      >
         <Icon name="folder" />
         <span className="switcher-copy">
           <span className="control-label">Repository</span>
@@ -49,10 +56,21 @@ export function RepositoryHeader({
         className="refresh-button"
         type="button"
         disabled={repository === null || loading}
+        title="Refresh repository (Ctrl+R)"
         onClick={onRefresh}
       >
         <Icon name="refresh" />
         <span>{loading ? "Refreshing…" : "Refresh"}</span>
+      </button>
+
+      <button
+        aria-label="Open settings"
+        className="refresh-button settings-button"
+        type="button"
+        title="Settings (Ctrl+,)"
+        onClick={onSettings}
+      >
+        <Icon name="settings" />
       </button>
 
       {accountControl}

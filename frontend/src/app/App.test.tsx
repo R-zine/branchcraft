@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AuthService } from "../services/authService";
 import type { DiffService } from "../services/diffService";
 import type { RepositoryService } from "../services/repositoryService";
+import type { SettingsService } from "../services/settingsService";
 import type { StagingService } from "../services/stagingService";
 import type { FileDiff } from "../types/diff";
 import type { RepositorySnapshot } from "../types/repository";
@@ -57,6 +58,30 @@ function authService(): AuthService {
   };
 }
 
+function settingsService(
+  recentRepositories: Awaited<ReturnType<SettingsService["getSettings"]>>["recentRepositories"] = [],
+) {
+  const getSettings = vi.fn<SettingsService["getSettings"]>().mockResolvedValue({
+    theme: "system",
+    recentRepositories,
+  });
+  const setTheme = vi.fn<SettingsService["setTheme"]>().mockImplementation((theme) =>
+    Promise.resolve({ theme, recentRepositories }),
+  );
+  return {
+    service: {
+      getSettings,
+      setTheme,
+      removeRecentRepository: vi.fn(),
+      clearRecentRepositories: vi.fn(),
+      resetSettings: vi.fn(),
+      applyWindowTheme: vi.fn().mockResolvedValue(undefined),
+    } satisfies SettingsService,
+    getSettings,
+    setTheme,
+  };
+}
+
 function service() {
   const chooseDirectory = vi
     .fn<RepositoryService["chooseDirectory"]>()
@@ -105,11 +130,13 @@ function stagingService() {
 describe("Branchcraft app", () => {
   it("opens a selected repository and renders its status", async () => {
     const { repositoryService, openRepository } = service();
+    const settings = settingsService();
     render(
       <App
         authService={authService()}
         repositoryService={repositoryService}
         diffService={diffService()}
+        settingsService={settings.service}
       />,
     );
 
@@ -126,12 +153,14 @@ describe("Branchcraft app", () => {
 
   it("keeps the welcome view when the directory dialog is cancelled", async () => {
     const { repositoryService, chooseDirectory, openRepository } = service();
+    const settings = settingsService();
     chooseDirectory.mockResolvedValue(null);
     render(
       <App
         authService={authService()}
         repositoryService={repositoryService}
         diffService={diffService()}
+        settingsService={settings.service}
       />,
     );
 
@@ -149,12 +178,14 @@ describe("Branchcraft app", () => {
   it("applies the refreshed snapshot after staging a file", async () => {
     const { repositoryService } = service();
     const staging = stagingService();
+    const settings = settingsService();
     render(
       <App
         authService={authService()}
         repositoryService={repositoryService}
         diffService={diffService()}
         stagingService={staging.service}
+        settingsService={settings.service}
       />,
     );
 
@@ -173,6 +204,52 @@ describe("Branchcraft app", () => {
       "/work/branchcraft",
       "src/main.rs",
     );
+  });
+
+  it("opens settings from the keyboard and persists a fixed theme", async () => {
+    const { repositoryService } = service();
+    const settings = settingsService();
+    render(
+      <App
+        authService={authService()}
+        repositoryService={repositoryService}
+        diffService={diffService()}
+        settingsService={settings.service}
+      />,
+    );
+
+    fireEvent.keyDown(window, { key: ",", ctrlKey: true });
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeDefined();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Light" }));
+    await waitFor(() => expect(settings.setTheme).toHaveBeenCalledWith("light"));
+    expect(document.documentElement.dataset.theme).toBe("light");
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Settings" })).toBeNull();
+  });
+
+  it("opens an available recent repository without showing the picker", async () => {
+    const { repositoryService, chooseDirectory, openRepository } = service();
+    const settings = settingsService([
+      {
+        name: "branchcraft",
+        path: "/work/branchcraft",
+        available: true,
+      },
+    ]);
+    render(
+      <App
+        authService={authService()}
+        repositoryService={repositoryService}
+        diffService={diffService()}
+        settingsService={settings.service}
+      />,
+    );
+
+    fireEvent.click(await screen.findByTitle("/work/branchcraft"));
+    await waitFor(() => expect(openRepository).toHaveBeenCalledWith("/work/branchcraft"));
+    expect(chooseDirectory).not.toHaveBeenCalled();
   });
 });
 

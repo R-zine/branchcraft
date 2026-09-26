@@ -3,7 +3,7 @@
 Branchcraft is a fast, focused desktop Git client for Linux, built with Rust,
 Tauri, and React.
 
-The current implementation completes Milestones 0 through 6: it opens an
+The current implementation completes Milestones 0 through 8: it opens an
 existing local Git repository through a native directory picker, shows its
 working-tree changes, renders the selected file in a Monaco diff editor, stages
 changes, creates commits, browses commit history, and manages local branches
@@ -11,9 +11,15 @@ safely. It fetches, pulls, and pushes local or authenticated GitHub HTTPS
 remotes without freezing the UI, with streamed progress and recoverable error
 states. It also signs in to GitHub in the system browser, validates a PKCE and
 state-protected loopback callback, retrieves the current account, and stores
-the OAuth session only in the operating system keyring. Git and authentication
-logic live in independently tested Rust crates; the React UI talks to them only
-through typed Tauri service wrappers.
+the OAuth session only in the operating system keyring. Signed-in users can
+browse, search, and filter their accessible GitHub repositories, then clone one
+through a native destination picker. A repository can also be cloned directly
+from a validated HTTPS URL. Branchcraft also persists non-secret theme and
+recent-repository settings, follows the desktop color scheme by default,
+provides keyboard navigation, and includes RPM plus practical Flatpak packaging
+assets. Git, authentication, and settings logic live in independently tested
+Rust crates; the React UI talks to them only through typed Tauri service
+wrappers.
 
 ## Quick start on Fedora
 
@@ -61,8 +67,13 @@ instructions, including GitHub OAuth App configuration.
   browser-based GitHub OAuth, PKCE/state validation, an ephemeral loopback
   callback, current-user display, Secret Service/native keyring persistence,
   logout, authenticated HTTPS fetch/pull/push, progress reporting, safe
-  fast-forward/merge handling, tests, and CI.
-- Next: repository discovery and cloning (Milestone 7).
-- Not yet implemented: cloning, GitHub repository browsing, and production
-  packaging polish.
+  fast-forward/merge handling, authenticated GitHub repository browsing,
+  repository search/filtering, clone-by-selection and clone-by-URL, native
+  destination selection, clone progress, recent repositories, keyboard
+  shortcuts, system/light/dark themes, native window-theme synchronization,
+  settings recovery, production logging, release optimization, application
+  metadata, RPM packaging, Flatpak packaging assets, tests, and CI.
+- Release preparation remaining outside the implementation: select the final
+  GitHub owner/application ID, configure release OAuth credentials, and sign
+  published artifacts.
 

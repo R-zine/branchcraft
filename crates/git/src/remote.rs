@@ -336,6 +336,13 @@ fn add_credentials<'a>(
     let Some(token) = token else {
         return;
     };
+    add_github_credentials(callbacks, token);
+}
+
+pub(super) fn add_github_credentials<'a>(
+    callbacks: &mut RemoteCallbacks<'a>,
+    token: &'a SecretString,
+) {
     callbacks.credentials(move |url, _, allowed| {
         if !is_safe_github_url(url) {
             return Err(git2::Error::from_str("credential host mismatch"));
@@ -474,7 +481,7 @@ fn classify_remote_url(raw_url: &str) -> (RemoteKind, String) {
     (RemoteKind::Unsupported, display)
 }
 
-fn is_safe_github_url(raw_url: &str) -> bool {
+pub(super) fn is_safe_github_url(raw_url: &str) -> bool {
     let Ok(parsed) = Url::parse(raw_url) else {
         return false;
     };

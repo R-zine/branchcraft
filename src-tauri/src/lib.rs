@@ -1,21 +1,24 @@
 mod commands;
+mod logging;
 
 use branchcraft_app_core::{AuthError, AuthErrorKind};
 use branchcraft_auth::{AuthService, BranchcraftAuth, BrowserLauncher, OAuthConfig};
 use branchcraft_git::{GitService, LibGitService};
 use branchcraft_github::{GitHubService, ReqwestGitHubService};
-use branchcraft_storage::{KeyringSecretStore, SecretStore};
-use std::sync::Arc;
+use branchcraft_storage::{JsonSettingsStore, KeyringSecretStore, SecretStore, SettingsStore};
+use std::{path::PathBuf, sync::Arc};
 use tauri::Manager;
 use url::Url;
 
 pub struct AppState {
     git: Arc<dyn GitService>,
     auth: Arc<dyn AuthService>,
+    github: Arc<dyn GitHubService>,
+    settings: Arc<dyn SettingsStore>,
 }
 
 impl AppState {
-    fn new() -> Result<Self, AuthError> {
+    fn new(settings_path: PathBuf) -> Result<Self, AuthError> {
         let github: Arc<dyn GitHubService> =
             Arc::new(ReqwestGitHubService::new().map_err(|_| {
                 AuthError::new(
@@ -26,11 +29,17 @@ impl AppState {
             })?);
         let secrets: Arc<dyn SecretStore> = Arc::new(KeyringSecretStore::new("Branchcraft"));
         let browser: Arc<dyn BrowserLauncher> = Arc::new(SystemBrowser);
-        let auth =
-            BranchcraftAuth::github(OAuthConfig::from_environment(), github, secrets, browser)?;
+        let auth = BranchcraftAuth::github(
+            OAuthConfig::from_environment(),
+            Arc::clone(&github),
+            secrets,
+            browser,
+        )?;
         Ok(Self {
             git: Arc::new(LibGitService::new()),
             auth: Arc::new(auth),
+            github,
+            settings: Arc::new(JsonSettingsStore::new(settings_path)),
         })
     }
 }
@@ -60,7 +69,21 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            app.manage(AppState::new()?);
+            let config_directory = app.path().app_config_dir()?;
+            if let Ok(log_directory) = app.path().app_log_dir() {
+                if logging::initialize(&log_directory).is_ok() {
+                    log::info!(target: "branchcraft", "Branchcraft desktop runtime started");
+                } else {
+                    eprintln!("Branchcraft production logging is unavailable.");
+                }
+            } else {
+                eprintln!("Branchcraft production logging is unavailable.");
+            }
+            std::panic::set_hook(Box::new(|_| {
+                log::error!(target: "branchcraft", "Branchcraft encountered an unexpected panic");
+                eprintln!("Branchcraft encountered an unexpected error.");
+            }));
+            app.manage(AppState::new(config_directory.join("settings.json"))?);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -72,8 +95,10 @@ pub fn run() {
             commands::branches::create_branch,
             commands::branches::checkout_branch,
             commands::branches::delete_branch,
+            commands::cloning::clone_repository,
             commands::commits::create_commit,
             commands::diffs::get_file_diff,
+            commands::github::list_github_repositories,
             commands::history::get_commit_history,
             commands::remotes::get_primary_remote,
             commands::remotes::fetch_remote,
@@ -81,6 +106,11 @@ pub fn run() {
             commands::remotes::push_remote,
             commands::repositories::open_repository,
             commands::repositories::refresh_repository,
+            commands::settings::get_settings,
+            commands::settings::set_theme,
+            commands::settings::remove_recent_repository,
+            commands::settings::clear_recent_repositories,
+            commands::settings::reset_settings,
             commands::staging::stage_file,
             commands::staging::unstage_file,
             commands::staging::stage_all,

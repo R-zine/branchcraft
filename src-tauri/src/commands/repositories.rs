@@ -17,9 +17,19 @@ pub async fn open_repository(
     state: State<'_, AppState>,
 ) -> Result<RepositorySnapshot, GitError> {
     let git = Arc::clone(&state.git);
-    tauri::async_runtime::spawn_blocking(move || git.open_repository(&request.path))
-        .await
-        .map_err(|_| task_error())?
+    let settings = Arc::clone(&state.settings);
+    tauri::async_runtime::spawn_blocking(move || {
+        let repository = git.open_repository(&request.path)?;
+        if settings
+            .record_recent_repository(&repository.name, &repository.path)
+            .is_err()
+        {
+            log::warn!(target: "branchcraft", "Recent repository settings could not be updated");
+        }
+        Ok(repository)
+    })
+    .await
+    .map_err(|_| task_error())?
 }
 
 #[tauri::command]

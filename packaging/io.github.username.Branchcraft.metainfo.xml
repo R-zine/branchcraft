@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Branchcraft contributors -->
+<component type="desktop-application">
+  <id>io.github.username.Branchcraft</id>
+  <name>Branchcraft</name>
+  <summary>A fast, focused desktop Git client</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="io.github.username">
+    <name>Branchcraft contributors</name>
+  </developer>
+  <description>
+    <p>
+      Branchcraft is a native desktop Git client focused on working-tree
+      changes, clear diffs, safe branch operations, GitHub authentication, and
+      repository discovery without requiring an Electron runtime.
+    </p>
+  </description>
+  <launchable type="desktop-id">branchcraft.desktop</launchable>
+  <provides>
+    <binary>branchcraft</binary>
+  </provides>
+  <categories>
+    <category>Development</category>
+    <category>RevisionControl</category>
+  </categories>
+  <keywords>
+    <keyword>Git</keyword>
+    <keyword>version control</keyword>
+    <keyword>repository</keyword>
+  </keywords>
+  <requires>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <display_length compare="ge">640</display_length>
+  </requires>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="0.1.0" date="2026-09-26">
+      <description>
+        <p>Initial Branchcraft desktop release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

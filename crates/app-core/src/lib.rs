@@ -270,6 +270,119 @@ pub struct RemoteOperationResult {
     pub outcome: RemoteOutcome,
 }
 
+/// Public repository metadata returned by GitHub's authenticated repository
+/// listing. Clone URLs are credential-free HTTPS addresses.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubRepository {
+    pub id: u64,
+    pub name: String,
+    pub full_name: String,
+    pub owner_login: String,
+    pub description: Option<String>,
+    pub private: bool,
+    pub fork: bool,
+    pub archived: bool,
+    pub clone_url: String,
+    pub default_branch: String,
+    pub language: Option<String>,
+    pub updated_at: String,
+}
+
+/// A bounded GitHub repository listing. `truncated` tells the UI when the
+/// account has more repositories than Branchcraft's discovery limit.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubRepositoryList {
+    pub repositories: Vec<GitHubRepository>,
+    pub truncated: bool,
+}
+
+/// Stable phases emitted while libgit2 clones a repository.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CloneProgressPhase {
+    Connecting,
+    Receiving,
+    Checkout,
+    Completed,
+}
+
+/// Bounded, non-secret clone progress streamed to the frontend.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CloneProgress {
+    pub phase: CloneProgressPhase,
+    pub current: u64,
+    pub total: u64,
+    pub bytes: u64,
+}
+
+/// User-selected application appearance. `System` follows the desktop color
+/// scheme and updates when the desktop preference changes.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ThemePreference {
+    #[default]
+    System,
+    Light,
+    Dark,
+}
+
+/// A previously opened repository stored in ordinary application settings.
+/// Availability is refreshed from disk whenever settings are loaded.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentRepository {
+    pub name: String,
+    pub path: PathBuf,
+    pub available: bool,
+}
+
+/// Non-secret Branchcraft preferences safe to expose to the frontend.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplicationSettings {
+    pub theme: ThemePreference,
+    pub recent_repositories: Vec<RecentRepository>,
+}
+
+/// Error categories for ordinary application-settings persistence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SettingsErrorKind {
+    Read,
+    Write,
+    Corrupt,
+    Unknown,
+}
+
+/// A safe settings error that does not expose platform paths or raw I/O
+/// payloads to the frontend.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Error)]
+#[error("{summary}")]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsError {
+    pub kind: SettingsErrorKind,
+    pub summary: String,
+    pub detail: Option<String>,
+}
+
+impl SettingsError {
+    #[must_use]
+    pub fn new(
+        kind: SettingsErrorKind,
+        summary: impl Into<String>,
+        detail: Option<String>,
+    ) -> Self {
+        Self {
+            kind,
+            summary: summary.into(),
+            detail,
+        }
+    }
+}
+
 /// Error categories that frontend recovery UI can act on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -294,6 +407,8 @@ pub enum GitErrorKind {
     DetachedHead,
     NonFastForward,
     PushRejected,
+    InvalidRemoteUrl,
+    DestinationExists,
     Unknown,
 }
 

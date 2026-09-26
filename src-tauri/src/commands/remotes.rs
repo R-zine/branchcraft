@@ -1,8 +1,7 @@
-use super::task_error;
+use super::{map_auth_error, task_error};
 use crate::AppState;
 use branchcraft_app_core::{
-    AuthError, AuthErrorKind, GitError, GitErrorKind, RemoteInfo, RemoteKind,
-    RemoteOperationResult, RemoteProgress,
+    GitError, RemoteInfo, RemoteKind, RemoteOperationResult, RemoteProgress,
 };
 use branchcraft_auth::AuthService;
 use secrecy::SecretString;
@@ -105,35 +104,4 @@ async fn token_for_remote(
         .await
         .map(Some)
         .map_err(|error| map_auth_error(&error))
-}
-
-fn map_auth_error(error: &AuthError) -> GitError {
-    let (kind, summary, detail) = match error.kind {
-        AuthErrorKind::Network => (
-            GitErrorKind::Network,
-            "GitHub could not be reached.",
-            "Check your network connection, then try again.",
-        ),
-        AuthErrorKind::NotConfigured => (
-            GitErrorKind::Authentication,
-            "GitHub sign-in is not configured.",
-            "Configure the Branchcraft OAuth App before using this remote.",
-        ),
-        AuthErrorKind::AuthenticationExpired => (
-            GitErrorKind::Authentication,
-            "Your GitHub sign-in has expired.",
-            "Sign in to GitHub again, then retry the operation.",
-        ),
-        AuthErrorKind::CredentialStore => (
-            GitErrorKind::Authentication,
-            "GitHub credentials could not be loaded.",
-            "Unlock the system keyring, then retry the operation.",
-        ),
-        _ => (
-            GitErrorKind::Authentication,
-            "GitHub authentication is required.",
-            "Sign in to GitHub, then retry the operation.",
-        ),
-    };
-    GitError::new(kind, summary, Some(detail.to_owned()))
 }

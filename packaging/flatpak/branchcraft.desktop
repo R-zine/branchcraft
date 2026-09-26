@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Branchcraft
+Comment=A fast, focused desktop Git client
+Exec=branchcraft
+Icon=branchcraft
+Terminal=false
+Categories=Development;RevisionControl;
+Keywords=Git;Version Control;Repository;
+StartupNotify=true
+StartupWMClass=Branchcraft

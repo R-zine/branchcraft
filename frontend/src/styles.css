@@ -1731,6 +1731,538 @@ button:focus-visible {
   font-size: 9px;
 }
 
+.welcome-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.welcome-actions .primary-button {
+  margin-top: 0;
+}
+
+.secondary-button {
+  display: flex;
+  height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondary-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.secondary-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.secondary-button .icon {
+  width: 16px;
+}
+
+.welcome-recents {
+  width: min(540px, 78vw);
+  margin-top: 24px;
+  text-align: left;
+}
+
+.welcome-recents h2 {
+  margin: 0 0 7px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.welcome-recents ul {
+  display: grid;
+  gap: 5px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.welcome-recents button {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-raised);
+  text-align: left;
+  cursor: pointer;
+}
+
+.welcome-recents button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--bg-elevated);
+}
+
+.welcome-recents button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.welcome-recents .icon {
+  width: 16px;
+  color: var(--accent);
+}
+
+.welcome-recents button > span {
+  min-width: 0;
+}
+
+.welcome-recents strong,
+.welcome-recents small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.welcome-recents strong {
+  color: var(--text);
+  font-size: 10.5px;
+}
+
+.welcome-recents small {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font: 8.5px "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.welcome-recents em {
+  color: var(--warning);
+  font-size: 8.5px;
+  font-style: normal;
+}
+
+.clone-view {
+  min-height: 0;
+  padding: 28px clamp(22px, 4vw, 52px) 34px;
+  overflow: auto;
+}
+
+.clone-view-header {
+  display: flex;
+  max-width: 1180px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 auto 20px;
+}
+
+.clone-view-header h1 {
+  margin: 4px 0 6px;
+  font-size: 22px;
+  letter-spacing: -0.025em;
+}
+
+.clone-view-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.clone-view-header > button {
+  padding: 7px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.clone-view-header > button:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.clone-eyebrow {
+  color: var(--accent);
+  font-size: 8.5px;
+  font-weight: 760;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.clone-layout {
+  display: grid;
+  max-width: 1180px;
+  min-height: 420px;
+  grid-template-columns: minmax(0, 1.65fr) minmax(270px, 0.8fr);
+  gap: 14px;
+  margin: 0 auto;
+}
+
+.github-browser,
+.clone-url-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow);
+}
+
+.github-browser {
+  display: flex;
+  min-height: 430px;
+  flex-direction: column;
+}
+
+.clone-url-panel {
+  align-self: start;
+}
+
+.clone-section-heading {
+  display: flex;
+  min-height: 62px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.clone-section-heading > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.clone-section-heading h2 {
+  margin: 0;
+  font-size: 12px;
+}
+
+.clone-section-heading span {
+  color: var(--text-muted);
+  font-size: 8.5px;
+}
+
+.clone-section-heading > button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.clone-section-heading > button .icon {
+  width: 13px;
+}
+
+.clone-section-heading button:disabled,
+.clone-view-header button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.repository-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 135px;
+  gap: 7px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.repository-filters input,
+.repository-filters select,
+.clone-url-panel input {
+  min-width: 0;
+  height: 33px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 10px;
+}
+
+.repository-filters input,
+.clone-url-panel input {
+  padding: 0 9px;
+}
+
+.repository-filters select {
+  padding: 0 7px;
+}
+
+.repository-filters input:focus,
+.repository-filters select:focus,
+.clone-url-panel input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.repository-browser-state {
+  display: flex;
+  min-height: 190px;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  padding: 25px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  text-align: center;
+}
+
+.repository-browser-state[role="status"] {
+  flex-direction: row;
+}
+
+.repository-browser-state strong {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.github-repository-list {
+  min-height: 0;
+  max-height: min(520px, calc(100vh - 315px));
+  margin: 0;
+  padding: 6px;
+  overflow: auto;
+  list-style: none;
+}
+
+.github-repository-list li {
+  display: grid;
+  min-height: 76px;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 6px;
+}
+
+.github-repository-list li:hover {
+  background: var(--bg-elevated);
+}
+
+.github-repository-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.github-repository-copy > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.github-repository-copy strong,
+.github-repository-copy p,
+.github-repository-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.github-repository-copy strong {
+  font-size: 10.5px;
+}
+
+.github-repository-copy > div span {
+  padding: 2px 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 7.5px;
+}
+
+.github-repository-copy > div span.private {
+  border-color: #725b32;
+  color: var(--warning);
+}
+
+.github-repository-copy > div span.public {
+  border-color: #37634a;
+  color: var(--success);
+}
+
+.github-repository-copy p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.github-repository-copy small {
+  color: var(--text-muted);
+  font-size: 8px;
+}
+
+.github-repository-list > li > button {
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 9.5px;
+  font-weight: 680;
+  cursor: pointer;
+}
+
+.github-repository-list > li > button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.github-repository-list > li > button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.repository-limit {
+  margin: auto 0 0;
+  padding: 7px 10px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 8px;
+  text-align: center;
+}
+
+.clone-url-panel form {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px 14px 10px;
+}
+
+.clone-url-panel label {
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.clone-url-panel form > button,
+.clone-error button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 9.5px;
+  font-weight: 680;
+  cursor: pointer;
+}
+
+.clone-url-panel form > button:hover:not(:disabled),
+.clone-error button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.clone-url-panel form > button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.clone-security-note {
+  margin: 0;
+  padding: 0 14px 14px;
+  color: var(--text-muted);
+  font-size: 8.5px;
+  line-height: 1.5;
+}
+
+.clone-progress {
+  display: grid;
+  align-items: start;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  margin: 0 12px 12px;
+  padding: 10px;
+  border: 1px solid #355661;
+  border-radius: 5px;
+  background: var(--selection);
+}
+
+.clone-progress > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.clone-progress strong,
+.clone-progress span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clone-progress strong {
+  font-size: 9.5px;
+}
+
+.clone-progress span {
+  color: var(--text-secondary);
+  font-size: 8.5px;
+}
+
+.clone-progress progress {
+  width: 100%;
+  height: 4px;
+  margin-top: 4px;
+  accent-color: var(--accent);
+}
+
+.clone-error {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px;
+  padding: 9px 10px;
+  border: 1px solid #573038;
+  border-radius: 5px;
+  background: var(--danger-bg);
+  color: #f4c5c8;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.clone-error span {
+  color: #c89ba0;
+}
+
+.clone-error button {
+  align-self: flex-start;
+  min-height: 27px;
+  margin-top: 3px;
+}
+
 .status-bar {
   display: flex;
   align-items: center;
@@ -1762,6 +2294,297 @@ button:focus-visible {
   color: var(--text);
 }
 
+.settings-button {
+  padding: 0 9px;
+}
+
+.settings-button .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.settings-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(5 9 13 / 64%);
+  backdrop-filter: blur(3px);
+}
+
+.settings-panel {
+  display: flex;
+  width: min(690px, calc(100vw - 48px));
+  max-height: min(760px, calc(100vh - 48px));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-raised);
+  color: var(--text);
+  box-shadow: 0 28px 80px rgb(0 0 0 / 46%);
+}
+
+.settings-panel > header {
+  display: flex;
+  min-height: 66px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-panel > header span {
+  color: var(--accent);
+  font-size: 8px;
+  font-weight: 780;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.settings-panel > header h2 {
+  margin: 3px 0 0;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.settings-panel > header button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.settings-panel > header button:hover {
+  border-color: var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.settings-content {
+  display: grid;
+  gap: 0;
+  overflow-y: auto;
+}
+
+.settings-content > section {
+  padding: 17px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-content > section:last-child {
+  border-bottom: 0;
+}
+
+.settings-section-heading h3 {
+  margin: 0;
+  font-size: 11px;
+}
+
+.settings-section-heading span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  padding: 0;
+  margin: 11px 0 0;
+  border: 0;
+}
+
+.theme-options label {
+  cursor: pointer;
+}
+
+.theme-options input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.theme-options span {
+  display: grid;
+  min-height: 36px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 680;
+}
+
+.theme-options input:checked + span {
+  border-color: var(--accent);
+  background: var(--selection);
+  color: var(--text);
+}
+
+.theme-options input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.settings-recent-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.settings-recent-heading button,
+.settings-recents button,
+.settings-error button {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 8.5px;
+  cursor: pointer;
+}
+
+.settings-recent-heading button:hover:not(:disabled),
+.settings-recents button:hover:not(:disabled),
+.settings-error button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.settings-recents {
+  display: grid;
+  gap: 5px;
+  padding: 0;
+  margin: 11px 0 0;
+  list-style: none;
+}
+
+.settings-recents li {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+}
+
+.settings-recents li > div {
+  min-width: 0;
+}
+
+.settings-recents strong,
+.settings-recents span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-recents strong {
+  font-size: 9.5px;
+}
+
+.settings-recents span {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font: 8px "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.settings-recents em {
+  color: var(--warning);
+  font-size: 8px;
+  font-style: normal;
+}
+
+.settings-empty,
+.about-branchcraft p {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 9.5px;
+  line-height: 1.55;
+}
+
+.shortcut-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  margin: 11px 0 0;
+}
+
+.shortcut-list > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shortcut-list dt {
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.shortcut-list dd {
+  margin: 0;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 42px;
+  padding: 3px 5px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: 8px "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  text-align: center;
+}
+
+.settings-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.settings-error strong,
+.settings-error span {
+  display: block;
+  font-size: 9px;
+}
+
+.settings-error span {
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+.settings-error > div:last-child {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 5px;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -1774,8 +2597,56 @@ button:focus-visible {
   border: 0;
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #eef1f3;
+  --bg-raised: #fff;
+  --bg-elevated: #f3f5f6;
+  --bg-hover: #e8ecef;
+  --border: #d7dde1;
+  --border-strong: #c4ccd2;
+  --text: #1b242c;
+  --text-secondary: #5c6974;
+  --text-muted: #7c8994;
+  --selection: #d9edeb;
+  --accent: #16877e;
+  --accent-strong: #0f746c;
+  --accent-ink: #fff;
+  --danger: #c64d58;
+  --danger-bg: #fae9eb;
+  --warning: #9a681c;
+  --success: #27814b;
+  --shadow: 0 14px 35px rgb(35 47 55 / 10%);
+}
+
+:root[data-theme="light"] .app-shell {
+  background: var(--bg);
+}
+
+:root[data-theme="light"] .app-header,
+:root[data-theme="light"] .changes-column,
+:root[data-theme="light"] .changes-panel,
+:root[data-theme="light"] .status-bar,
+:root[data-theme="light"] .inspector-header {
+  background: var(--bg-raised);
+}
+
+:root[data-theme="light"] .file-inspector {
+  background:
+    linear-gradient(rgb(20 40 50 / 2%) 1px, transparent 1px) 0 0 / 100% 24px,
+    #f8fafb;
+}
+
+:root[data-theme="light"] .history-marker {
+  background: var(--bg-raised);
+}
+
+:root[data-theme="light"] .error-banner {
+  color: #7d222a;
+}
+
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme]) {
     color-scheme: light;
     --bg: #eef1f3;
     --bg-raised: #fff;
@@ -1797,29 +2668,29 @@ button:focus-visible {
     --shadow: 0 14px 35px rgb(35 47 55 / 10%);
   }
 
-  .app-shell {
+  :root:not([data-theme]) .app-shell {
     background: var(--bg);
   }
 
-  .app-header,
-  .changes-column,
-  .changes-panel,
-  .status-bar,
-  .inspector-header {
+  :root:not([data-theme]) .app-header,
+  :root:not([data-theme]) .changes-column,
+  :root:not([data-theme]) .changes-panel,
+  :root:not([data-theme]) .status-bar,
+  :root:not([data-theme]) .inspector-header {
     background: var(--bg-raised);
   }
 
-  .file-inspector {
+  :root:not([data-theme]) .file-inspector {
     background:
       linear-gradient(rgb(20 40 50 / 2%) 1px, transparent 1px) 0 0 / 100% 24px,
       #f8fafb;
   }
 
-  .history-marker {
+  :root:not([data-theme]) .history-marker {
     background: var(--bg-raised);
   }
 
-  .error-banner {
+  :root:not([data-theme]) .error-banner {
     color: #7d222a;
   }
 }
@@ -1847,6 +2718,27 @@ button:focus-visible {
 
   .account-trigger > span:last-child {
     display: none;
+  }
+
+  .clone-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .clone-url-panel {
+    grid-row: 1;
+  }
+
+  .github-repository-list {
+    max-height: 420px;
+  }
+
+  .settings-panel {
+    width: calc(100vw - 28px);
+    max-height: calc(100vh - 28px);
+  }
+
+  .shortcut-list {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -13,6 +13,7 @@ interface RepositoryState {
   loading: boolean;
   revision: number;
   openRepository: () => Promise<void>;
+  openPath: (path: string) => Promise<void>;
   refreshRepository: () => Promise<void>;
   selectPath: (path: string) => void;
   updateRepository: (snapshot: RepositorySnapshot) => void;
@@ -68,6 +69,13 @@ export function useRepository(service: RepositoryService): RepositoryState {
     }
   }, [run, service]);
 
+  const openPath = useCallback(
+    async (path: string) => {
+      await run(() => service.openRepository(path));
+    },
+    [run, service],
+  );
+
   const refreshRepository = useCallback(async () => {
     if (repository !== null) {
       await run(() => service.refreshRepository(repository.path));
@@ -81,6 +89,7 @@ export function useRepository(service: RepositoryService): RepositoryState {
     loading,
     revision,
     openRepository,
+    openPath,
     refreshRepository,
     selectPath: setSelectedPath,
     updateRepository,

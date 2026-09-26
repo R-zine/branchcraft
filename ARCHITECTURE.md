@@ -9,7 +9,7 @@ Ownership is intentionally split by directory:
 | --- | --- | --- |
 | Domain models | `crates/app-core` | Serializable, implementation-neutral types |
 | Authentication | `crates/auth` | OAuth/PKCE lifecycle and backend-only session access |
-| Secret persistence | `crates/storage` | Operating-system credential-store abstraction |
+| Persistence | `crates/storage` | OS credential store plus non-secret JSON settings |
 | GitHub HTTP API | `crates/github` | GitHub-specific HTTP operations; no local Git behavior |
 | Git behavior | `crates/git` | `GitService`; no Tauri or React dependencies |
 | Desktop adapter | `src-tauri` | Thin commands and native plugins only |
@@ -21,4 +21,10 @@ Credentials never cross the Tauri command boundary. Remote Git behavior
 requests an ephemeral `SecretString` through `AuthService` and supplies it to
 libgit2's credential callback only for exact, credential-free
 `https://github.com` remotes. Tokens are never placed in a remote URL.
+The same boundary applies to cloning: the GitHub repository browser receives
+only public repository metadata, while an optional access token stays in Rust
+and is exposed only to the exact GitHub HTTPS credential callback.
+Ordinary preferences are stored separately from credentials. Theme and recent
+repository metadata use the application configuration directory; OAuth tokens
+remain exclusively in the operating-system keyring.
 

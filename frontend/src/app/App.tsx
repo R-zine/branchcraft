@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { AccountMenu } from "../features/auth/AccountMenu";
 import { BranchPicker } from "../features/branches/BranchPicker";
+import { CloneView } from "../features/cloning/CloneView";
 import { ChangesPanel } from "../features/changes/ChangesPanel";
 import { useStaging } from "../features/changes/useStaging";
 import { CommitForm } from "../features/commit/CommitForm";
@@ -11,16 +12,28 @@ import { RepositoryHeader } from "../features/repositories/RepositoryHeader";
 import { RemoteControls } from "../features/remotes/RemoteControls";
 import { useRepository } from "../features/repositories/useRepository";
 import { WelcomeView } from "../features/repositories/WelcomeView";
+import { SettingsPanel } from "../features/settings/SettingsPanel";
+import { useKeyboardShortcuts } from "../features/settings/useKeyboardShortcuts";
+import { useSettings } from "../features/settings/useSettings";
 import { tauriAuthService, type AuthService } from "../services/authService";
 import { tauriCommitService, type CommitService } from "../services/commitService";
+import { tauriCloneService, type CloneService } from "../services/cloneService";
 import { tauriBranchService, type BranchService } from "../services/branchService";
 import { tauriDiffService, type DiffService } from "../services/diffService";
 import { tauriHistoryService, type HistoryService } from "../services/historyService";
+import {
+  tauriGitHubRepositoryService,
+  type GitHubRepositoryService,
+} from "../services/githubRepositoryService";
 import {
   tauriRepositoryService,
   type RepositoryService,
 } from "../services/repositoryService";
 import { tauriRemoteService, type RemoteService } from "../services/remoteService";
+import {
+  tauriSettingsService,
+  type SettingsService,
+} from "../services/settingsService";
 import {
   tauriStagingService,
   type StagingService,
@@ -35,6 +48,9 @@ interface AppProps {
   branchService?: BranchService;
   historyService?: HistoryService;
   remoteService?: RemoteService;
+  cloneService?: CloneService;
+  githubRepositoryService?: GitHubRepositoryService;
+  settingsService?: SettingsService;
 }
 
 export function App({
@@ -46,11 +62,17 @@ export function App({
   branchService = tauriBranchService,
   historyService = tauriHistoryService,
   remoteService = tauriRemoteService,
+  cloneService = tauriCloneService,
+  githubRepositoryService = tauriGitHubRepositoryService,
+  settingsService = tauriSettingsService,
 }: AppProps) {
   const [workspaceView, setWorkspaceView] = useState<"changes" | "history">(
     "changes",
   );
+  const [startView, setStartView] = useState<"welcome" | "clone">("welcome");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const state = useRepository(repositoryService);
+  const settings = useSettings(settingsService);
   const staging = useStaging(
     stagingService,
     state.repository?.path ?? null,
@@ -59,6 +81,36 @@ export function App({
   const selectedFile =
     state.repository?.files.find((file) => file.path === state.selectedPath) ??
     null;
+  const openRepository = useCallback(() => {
+    setStartView("welcome");
+    void state.openRepository();
+  }, [state.openRepository]);
+  const openRecentRepository = useCallback(
+    (path: string) => {
+      setStartView("welcome");
+      void state.openPath(path);
+    },
+    [state.openPath],
+  );
+  const showClone = useCallback(() => setStartView("clone"), []);
+  const refreshRepository = useCallback(() => {
+    void state.refreshRepository();
+  }, [state.refreshRepository]);
+  const showChanges = useCallback(() => setWorkspaceView("changes"), []);
+  const showHistory = useCallback(() => setWorkspaceView("history"), []);
+  const openSettings = useCallback(() => setSettingsOpen(true), []);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+
+  useKeyboardShortcuts({
+    openRepository,
+    cloneRepository: showClone,
+    refreshRepository,
+    showChanges,
+    showHistory,
+    openSettings,
+    closeSettings,
+    settingsOpen,
+  });
 
   return (
     <div className="app-shell">
@@ -81,8 +133,9 @@ export function App({
           />
         }
         accountControl={<AccountMenu service={authService} />}
-        onOpen={() => void state.openRepository()}
-        onRefresh={() => void state.refreshRepository()}
+        onSettings={openSettings}
+        onOpen={openRepository}
+        onRefresh={refreshRepository}
       />
 
       {state.error !== null && (
@@ -93,10 +146,23 @@ export function App({
         />
       )}
 
-      {state.repository === null ? (
+      {startView === "clone" ? (
+        <CloneView
+          githubService={githubRepositoryService}
+          cloneService={cloneService}
+          onCloned={(repository) => {
+            state.updateRepository(repository);
+            setStartView("welcome");
+          }}
+          onBack={() => setStartView("welcome")}
+        />
+      ) : state.repository === null ? (
         <WelcomeView
           loading={state.loading}
-          onOpen={() => void state.openRepository()}
+          recentRepositories={settings.settings.recentRepositories}
+          onOpen={openRepository}
+          onOpenRecent={openRecentRepository}
+          onClone={showClone}
         />
       ) : (
         <main className="workspace">
@@ -155,6 +221,7 @@ export function App({
             file={selectedFile}
             service={diffService}
             repositoryRevision={state.revision}
+            theme={settings.resolvedTheme}
           />
         </main>
       )}
@@ -166,11 +233,14 @@ export function App({
         <button
           aria-label="Open repository from status bar"
           type="button"
-          onClick={() => void state.openRepository()}
+          title="Open repository (Ctrl+O)"
+          onClick={openRepository}
         >
           Open Repository
         </button>
       </footer>
+
+      {settingsOpen && <SettingsPanel state={settings} onClose={closeSettings} />}
     </div>
   );
 }

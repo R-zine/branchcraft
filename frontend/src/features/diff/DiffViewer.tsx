@@ -3,6 +3,7 @@ import { Icon } from "../../components/Icon";
 import type { DiffService } from "../../services/diffService";
 import type { FileDiff } from "../../types/diff";
 import type { FileStatus } from "../../types/repository";
+import type { ResolvedTheme } from "../../types/settings";
 import { statusLabel } from "../changes/statusPresentation";
 import { languageForPath } from "./language";
 import { useFileDiff } from "./useFileDiff";
@@ -18,6 +19,7 @@ interface DiffViewerProps {
   file: FileStatus | null;
   service: DiffService;
   repositoryRevision?: number;
+  theme?: ResolvedTheme;
 }
 
 type ViewMode = "split" | "inline";
@@ -68,6 +70,7 @@ export function DiffViewer({
   file,
   service,
   repositoryRevision = 0,
+  theme = "dark",
 }: DiffViewerProps) {
   const { diff, error, loading, reload } = useFileDiff(
     service,
@@ -180,6 +183,7 @@ export function DiffViewer({
                     newContent={diff.file.newContent}
                     language={language}
                     sideBySide={sideBySide}
+                    theme={theme}
                   />
                 </Suspense>
               </div>

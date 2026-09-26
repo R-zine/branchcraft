@@ -1,0 +1,38 @@
+id: io.github.username.Branchcraft
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+command: branchcraft
+rename-desktop-file: branchcraft.desktop
+rename-icon: branchcraft
+rename-appdata-file: branchcraft.metainfo.xml
+finish-args:
+  - --socket=wayland
+  - --device=dri
+  - --share=ipc
+  - --share=network
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.freedesktop.secrets
+modules:
+  - name: branchcraft
+    buildsystem: simple
+    sources:
+      - type: file
+        path: branchcraft.deb
+      - type: file
+        path: branchcraft.desktop
+      - type: file
+        path: ../io.github.username.Branchcraft.metainfo.xml
+        dest-filename: branchcraft.metainfo.xml
+      - type: file
+        path: ../../src-tauri/icons/icon.png
+        dest-filename: branchcraft.png
+    build-commands:
+      - mkdir deb-extract
+      - ar -x branchcraft.deb --output deb-extract
+      - tar -C deb-extract -xf deb-extract/data.tar.*
+      - install -Dm755 deb-extract/usr/bin/branchcraft /app/bin/branchcraft
+      - if test -d deb-extract/usr/lib/Branchcraft; then mkdir -p /app/lib/Branchcraft && cp -a deb-extract/usr/lib/Branchcraft/. /app/lib/Branchcraft/; fi
+      - install -Dm644 branchcraft.desktop /app/share/applications/branchcraft.desktop
+      - install -Dm644 branchcraft.png /app/share/icons/hicolor/512x512/apps/branchcraft.png
+      - install -Dm644 branchcraft.metainfo.xml /app/share/metainfo/branchcraft.metainfo.xml

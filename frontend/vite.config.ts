@@ -13,7 +13,7 @@ export default defineConfig({
   envPrefix: ["VITE_", "TAURI_ENV_*"],
   build: {
     target: "es2022",
-    sourcemap: true,
+    sourcemap: false,
     // Monaco is isolated from startup and currently emits a 2.7 MB lazy chunk.
     chunkSizeWarningLimit: 3000,
   },

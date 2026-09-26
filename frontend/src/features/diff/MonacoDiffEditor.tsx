@@ -23,8 +23,8 @@ import "monaco-editor/languages/definitions/swift/register";
 import "monaco-editor/languages/definitions/typescript/register";
 import "monaco-editor/languages/definitions/xml/register";
 import "monaco-editor/languages/definitions/yaml/register";
-import { useEffect, useState } from "react";
 import "./monacoEnvironment";
+import type { ResolvedTheme } from "../../types/settings";
 
 loader.config({ monaco });
 
@@ -34,17 +34,7 @@ interface MonacoDiffEditorProps {
   newContent: string;
   language: string;
   sideBySide: boolean;
-}
-
-function preferredTheme(): "branchcraft-dark" | "branchcraft-light" {
-  if (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-color-scheme: light)").matches
-  ) {
-    return "branchcraft-light";
-  }
-  return "branchcraft-dark";
+  theme: ResolvedTheme;
 }
 
 function defineThemes(monacoInstance: typeof monaco) {
@@ -84,19 +74,8 @@ export function MonacoDiffEditor({
   newContent,
   language,
   sideBySide,
+  theme,
 }: MonacoDiffEditorProps) {
-  const [theme, setTheme] = useState(preferredTheme);
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") {
-      return undefined;
-    }
-    const preference = window.matchMedia("(prefers-color-scheme: light)");
-    const update = () => setTheme(preference.matches ? "branchcraft-light" : "branchcraft-dark");
-    preference.addEventListener("change", update);
-    return () => preference.removeEventListener("change", update);
-  }, []);
-
   const modelKey = encodeURIComponent(path);
   return (
     <DiffEditor
@@ -108,7 +87,7 @@ export function MonacoDiffEditor({
       modifiedModelPath={`inmemory://branchcraft/modified/${modelKey}`}
       keepCurrentOriginalModel={false}
       keepCurrentModifiedModel={false}
-      theme={theme}
+      theme={`branchcraft-${theme}`}
       beforeMount={defineThemes}
       loading={<span className="diff-loading-label">Preparing editor…</span>}
       options={{

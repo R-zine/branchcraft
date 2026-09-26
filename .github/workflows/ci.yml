@@ -50,7 +50,7 @@ jobs:
         run: |
           dnf install -y git curl gcc gcc-c++ make nodejs npm \
             webkit2gtk4.1-devel openssl-devel wget file \
-            libappindicator-gtk3-devel librsvg2-devel libxdo-devel
+            libappindicator-gtk3-devel librsvg2-devel libxdo-devel rpm-build
       - uses: actions/checkout@v4
       - name: Install stable Rust
         run: |
@@ -66,6 +66,14 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: Build Branchcraft
-        run: cargo build -p branchcraft --locked
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version '^2.11' --locked
+      - name: Build Branchcraft RPM
+        run: cargo tauri build --config src-tauri/tauri.conf.json --bundles rpm
+      - name: Upload RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: branchcraft-rpm
+          path: target/release/bundle/rpm/*.rpm
+          if-no-files-found: error
 

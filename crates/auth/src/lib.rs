@@ -986,6 +986,13 @@ mod tests {
             assert_eq!(access_token.expose_secret(), "access-token");
             Ok(test_account())
         }
+
+        async fn repositories(
+            &self,
+            _access_token: &SecretString,
+        ) -> Result<branchcraft_app_core::GitHubRepositoryList, GitHubError> {
+            unreachable!("authentication tests do not list repositories")
+        }
     }
 
     fn test_tokens(expires_in: u64) -> OAuthTokenSet {

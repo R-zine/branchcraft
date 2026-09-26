@@ -15,6 +15,10 @@ actionable structured errors.
 - Behavior: `crates/git`
 - Models: `crates/app-core`
 
-Repository discovery, recents, creation, and cloning are intentionally outside
-this first slice.
+This first slice remains responsible for opening an existing local repository.
+Successful opens are recorded through the separate settings boundary and shown
+on the welcome screen; missing recent paths are disabled and can be removed.
+GitHub discovery and cloning are documented separately in
+[cloning and GitHub discovery](cloning-and-discovery.md). Repository creation
+remains outside the implemented scope.
 

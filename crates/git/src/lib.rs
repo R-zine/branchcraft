@@ -1,15 +1,16 @@
 //! Git operations for Branchcraft, isolated from the desktop shell.
 
 mod branches;
+mod cloning;
 mod diff;
 mod history;
 mod mutations;
 mod remote;
 
 use branchcraft_app_core::{
-    BranchInfo, BranchOperationResult, BranchSummary, ChangeKind, CommitHistory, CommitResult,
-    Diff, FileStatus, GitError, GitErrorKind, RemoteInfo, RemoteOperationResult, RemoteProgress,
-    RepositoryId, RepositorySnapshot,
+    BranchInfo, BranchOperationResult, BranchSummary, ChangeKind, CloneProgress, CommitHistory,
+    CommitResult, Diff, FileStatus, GitError, GitErrorKind, RemoteInfo, RemoteOperationResult,
+    RemoteProgress, RepositoryId, RepositorySnapshot,
 };
 use git2::{ErrorClass, ErrorCode, Repository, Status, StatusOptions};
 use secrecy::SecretString;
@@ -174,6 +175,37 @@ pub trait GitService: Send + Sync {
         token: Option<&SecretString>,
         progress: &mut dyn FnMut(RemoteProgress),
     ) -> Result<RemoteOperationResult, GitError>;
+
+    /// Validates a clone source without accessing the network and identifies
+    /// whether GitHub credentials may be used for it.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error for insecure, credential-bearing, or
+    /// malformed source URLs.
+    fn clone_source_kind(&self, source: &str) -> Result<CloneSourceKind, GitError>;
+
+    /// Clones into a new repository-named child of `destination_parent`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured validation, destination, authentication, network,
+    /// permission, or repository error.
+    fn clone_repository(
+        &self,
+        source: &str,
+        destination_parent: &Path,
+        token: Option<&SecretString>,
+        progress: &mut dyn FnMut(CloneProgress),
+    ) -> Result<RepositorySnapshot, GitError>;
+}
+
+/// Credential policy for a validated clone source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CloneSourceKind {
+    GitHubHttps,
+    AnonymousHttps,
+    Local,
 }
 
 /// libgit2-backed implementation of [`GitService`].
@@ -324,6 +356,21 @@ impl GitService for LibGitService {
         progress: &mut dyn FnMut(RemoteProgress),
     ) -> Result<RemoteOperationResult, GitError> {
         remote::push(path, token, progress)
+    }
+
+    fn clone_source_kind(&self, source: &str) -> Result<CloneSourceKind, GitError> {
+        cloning::source_kind(source)
+    }
+
+    fn clone_repository(
+        &self,
+        source: &str,
+        destination_parent: &Path,
+        token: Option<&SecretString>,
+        progress: &mut dyn FnMut(CloneProgress),
+    ) -> Result<RepositorySnapshot, GitError> {
+        let destination = cloning::clone_repository(source, destination_parent, token, progress)?;
+        Self::snapshot(&destination)
     }
 }
 

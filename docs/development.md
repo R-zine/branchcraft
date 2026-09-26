@@ -66,21 +66,37 @@ cargo install tauri-cli --version '^2.11' --locked
 cargo tauri dev --config src-tauri/tauri.conf.json
 ```
 
-The Tauri command starts Vite automatically. To build an RPM:
+The Tauri command starts Vite automatically. To build the configured RPM and
+Debian packages:
+
+```bash
+cargo tauri build --config src-tauri/tauri.conf.json
+```
+
+To build only the primary RPM target:
 
 ```bash
 cargo tauri build --config src-tauri/tauri.conf.json --bundles rpm
 ```
 
-The package is written below `target/release/bundle/rpm`. The application ID is
-currently the explicit placeholder `io.github.username.Branchcraft`; replace the
-`username` segment in `src-tauri/tauri.conf.json` when the final GitHub owner is
-known.
+The package is written below `target/release/bundle/rpm`. CI runs the same RPM
+bundle command and uploads the result as an artifact. The application ID is
+currently the explicit placeholder `io.github.username.Branchcraft`; replace
+the `username` segment in `src-tauri/tauri.conf.json`, the AppStream MetaInfo,
+and the Flatpak manifest when the final GitHub owner is known.
+
+See [packaging.md](packaging.md) for RPM metadata, Flatpak staging, application
+ID, OAuth, and release validation details.
 
 The desktop session must provide a Secret Service implementation. Fedora GNOME
 normally starts GNOME Keyring automatically. If the keyring is locked or
 unavailable, local Git features continue to work and the account menu presents
 a recoverable credential-store error.
+
+Non-secret settings and bounded production logs use Tauri's platform-specific
+application config/log directories. The settings file stores only the selected
+theme and recent local paths. Logs rotate at 1 MiB and never intentionally log
+paths, credentials, server responses, or diff contents.
 
 ## Wayland
 

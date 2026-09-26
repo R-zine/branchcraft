@@ -85,6 +85,13 @@ status is loaded. Unauthorized credentials are removed. Expiring access tokens
 are refreshed shortly before expiry, and rotated refresh tokens replace the
 previous stored session.
 
+The repository browser requests accessible repositories through the paginated
+`GET /user/repos` endpoint with the same backend-only access token. Only public
+repository metadata crosses IPC; the token remains inside Rust. Repository
+cloning likewise obtains the token only after the clone source has been
+classified as exact, credential-free GitHub HTTPS. Public non-GitHub HTTPS
+sources are cloned anonymously.
+
 ## Secret storage and logout
 
 The complete OAuth token set is serialized only in memory and passed to the

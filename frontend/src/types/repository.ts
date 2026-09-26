@@ -60,6 +60,8 @@ export type GitErrorKind =
   | "detachedHead"
   | "nonFastForward"
   | "pushRejected"
+  | "invalidRemoteUrl"
+  | "destinationExists"
   | "unknown";
 
 export interface GitError {

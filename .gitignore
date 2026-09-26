@@ -1,6 +1,9 @@
 /target/
 /frontend/node_modules/
 /frontend/dist/
+/packaging/flatpak/branchcraft.deb
+/packaging/flatpak/build-dir/
+/packaging/flatpak/repository/
 /.tools/
 /src-tauri/gen/schemas/
 *.log

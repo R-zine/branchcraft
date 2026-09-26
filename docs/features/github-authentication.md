@@ -14,7 +14,7 @@ configured.
 - `crates/storage` owns the opaque `SecretStore` contract and native keyring
   implementation.
 - `crates/github` owns authenticated GitHub REST requests and public account
-  response mapping.
+  and repository response mapping.
 - `src-tauri/src/commands/auth.rs` is the thin IPC adapter.
 - `frontend/src/features/auth` owns account-menu state and presentation.
 - `frontend/src/services/authService.ts` is the only frontend auth invocation
@@ -22,12 +22,12 @@ configured.
 
 ## Contract
 
-The frontend may receive `AuthStatus`, public `Account` fields, and structured
-`AuthError` values. It must never receive an authorization code, access token,
-refresh token, PKCE verifier, or client secret. Remote Git commands obtain a
-short-lived `SecretString` only through the backend
-`AuthService::access_token` method and pass it directly to libgit2's credential
-callback.
+The frontend may receive `AuthStatus`, public `Account` and `GitHubRepository`
+fields, and structured errors. It must never receive an authorization code,
+access token, refresh token, PKCE verifier, or client secret. Remote Git and
+GitHub clone commands obtain a short-lived `SecretString` only through the
+backend `AuthService::access_token` method and pass it directly to the GitHub
+API or libgit2 credential callback.
 
 ## Acceptance coverage
 
