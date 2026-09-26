@@ -24,8 +24,10 @@ configured.
 
 The frontend may receive `AuthStatus`, public `Account` fields, and structured
 `AuthError` values. It must never receive an authorization code, access token,
-refresh token, PKCE verifier, or client secret. Future network Git code obtains
-a `SecretString` only through the backend `AuthService::access_token` method.
+refresh token, PKCE verifier, or client secret. Remote Git commands obtain a
+short-lived `SecretString` only through the backend
+`AuthService::access_token` method and pass it directly to libgit2's credential
+callback.
 
 ## Acceptance coverage
 

@@ -196,6 +196,80 @@ pub struct BranchOperationResult {
     pub branches: Vec<BranchSummary>,
 }
 
+/// Transport category for a configured Git remote. OAuth credentials are
+/// supplied only to credential-free GitHub HTTPS remotes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RemoteKind {
+    GitHubHttps,
+    Local,
+    Unsupported,
+}
+
+/// Public, credential-free information about the repository's active remote.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteInfo {
+    pub name: String,
+    pub display_url: String,
+    pub kind: RemoteKind,
+    pub tracking: bool,
+    pub ahead: u64,
+    pub behind: u64,
+}
+
+/// Network operation represented by a progress update.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RemoteOperation {
+    Fetch,
+    Pull,
+    Push,
+}
+
+/// Stable phase names used by the desktop progress UI.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RemoteProgressPhase {
+    Connecting,
+    Transferring,
+    Updating,
+    Merging,
+    Completed,
+}
+
+/// Bounded, non-secret progress data streamed from libgit2 to the frontend.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteProgress {
+    pub operation: RemoteOperation,
+    pub phase: RemoteProgressPhase,
+    pub remote_name: String,
+    pub current: u64,
+    pub total: u64,
+    pub bytes: u64,
+}
+
+/// Result category for a completed remote operation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RemoteOutcome {
+    Fetched,
+    UpToDate,
+    FastForwarded,
+    Merged,
+    Pushed,
+}
+
+/// Repository and remote state returned after fetch, pull, or push.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteOperationResult {
+    pub repository: RepositorySnapshot,
+    pub remote: RemoteInfo,
+    pub outcome: RemoteOutcome,
+}
+
 /// Error categories that frontend recovery UI can act on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -213,6 +287,13 @@ pub enum GitErrorKind {
     BranchAlreadyExists,
     BranchNotFound,
     UnsafeOperation,
+    NoRemote,
+    UnsupportedRemote,
+    Authentication,
+    Network,
+    DetachedHead,
+    NonFastForward,
+    PushRejected,
     Unknown,
 }
 

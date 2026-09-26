@@ -26,6 +26,7 @@ branchcraft-git = { path = "../crates/git" }
 branchcraft-github = { path = "../crates/github" }
 branchcraft-storage = { path = "../crates/storage" }
 serde.workspace = true
+secrecy.workspace = true
 tauri = { version = "2.11.6", features = [] }
 tauri-plugin-dialog = "2.7.3"
 tauri-plugin-opener = "2.5.5"

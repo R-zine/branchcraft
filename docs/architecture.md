@@ -3,10 +3,11 @@
 ## Scope
 
 This document records the foundation selected on 2026-09-26 and the
-Milestones 0–5 implementation. Branchcraft is an offline-capable local Git
+Milestones 0–6 implementation. Branchcraft is an offline-capable local Git
 client with bounded diffs and history, staging and commits, safe local branch
-management, and browser-based GitHub authentication. Network Git operations
-and cloning are not part of the compiled application yet.
+management, browser-based GitHub authentication, and asynchronous authenticated
+fetch/pull/push. Repository discovery and cloning are not part of the compiled
+application yet.
 
 ## Dependency baseline
 
@@ -86,6 +87,25 @@ The Tauri layer constructs services and opens the system browser, while the
 OAuth state machine stays in `branchcraft-auth`. Only public `Account`,
 `AuthStatus`, and safe `AuthError` values cross IPC.
 
+Remote Git operations reuse those backend-only credentials:
+
+```text
+RemoteControls -> RemoteService -> async Tauri command -> blocking worker
+                                                        /              \
+                                             AuthService token     GitService
+                                                                      |
+                                                           libgit2 callbacks
+                                                                      |
+                                                       GitHub HTTPS or local remote
+```
+
+The command inspects the active remote before asking `AuthService` for a token.
+Local remotes need no credential; only an exact, credential-free
+`https://github.com` URL can receive the token through libgit2's credential
+callback. Progress is streamed to React over a typed Tauri channel. The worker
+returns a fresh repository snapshot and remote ahead/behind counts so all
+feature state stays synchronized.
+
 ## Rust workspace ownership
 
 ### `branchcraft-app-core`
@@ -99,8 +119,10 @@ libgit2, or platform-keyring dependency.
 
 Owns `GitService` and its libgit2 implementation: exact-directory repository
 opening, normal/detached/unborn HEAD, separate index/worktree status, bounded
-diffs, staging, commits, history, and local branch operations. It has no IPC,
-UI, OAuth, or GitHub API knowledge.
+diffs, staging, commits, history, local branch operations, remote selection,
+fetch, safe pull integration, push, and transport/progress error mapping. It
+has no IPC, UI, OAuth, or GitHub API knowledge; a caller may provide a redacted
+backend secret to its credential callback.
 
 ### `branchcraft-auth`
 
@@ -147,6 +169,8 @@ permission remains limited to opening.
 - `features/branches` owns search, creation, switching, and safe deletion.
 - `features/auth` owns account status, browser sign-in/cancellation state,
   logout, and recoverable error UI.
+- `features/remotes` owns remote discovery, streamed operation progress,
+  ahead/behind state, fetch/pull/push actions, and recovery UI.
 - `services` is the only location for raw Tauri `invoke()` calls.
 - `types` mirrors serde IPC contracts; credentials have no frontend type.
 - `components` contains presentation-only primitives.
@@ -174,5 +198,11 @@ explicit result contracts rather than expanding a universal store.
   is passed directly to `SecretStore`; it is never written as a file.
 - HTTP redirects are disabled for token exchange. HTTP failures are mapped to
   safe categories without surfacing response bodies or credentials.
-- Milestone 6 must obtain HTTPS credentials from backend `AuthService` and must
-  not persist them in repository remotes or Git credential configuration.
+- Remote Git follows no redirects. OAuth credentials are supplied only through
+  libgit2 callbacks for exact GitHub HTTPS URLs; SSH, credential-bearing URLs,
+  non-GitHub hosts, query strings, and fragments are rejected before network
+  access. Tokens are never written to remote URLs or Git credential
+  configuration.
+- Pull refuses a dirty worktree. Diverged histories are merged in memory first;
+  a conflict leaves `HEAD`, the index, and working files unchanged. Push
+  rejection and non-fast-forward results are explicit errors.

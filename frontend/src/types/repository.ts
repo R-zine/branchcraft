@@ -53,6 +53,13 @@ export type GitErrorKind =
   | "branchAlreadyExists"
   | "branchNotFound"
   | "unsafeOperation"
+  | "noRemote"
+  | "unsupportedRemote"
+  | "authentication"
+  | "network"
+  | "detachedHead"
+  | "nonFastForward"
+  | "pushRejected"
   | "unknown";
 
 export interface GitError {

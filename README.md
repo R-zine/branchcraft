@@ -3,11 +3,13 @@
 Branchcraft is a fast, focused desktop Git client for Linux, built with Rust,
 Tauri, and React.
 
-The current implementation completes Milestones 0 through 5: it opens an
+The current implementation completes Milestones 0 through 6: it opens an
 existing local Git repository through a native directory picker, shows its
 working-tree changes, renders the selected file in a Monaco diff editor, stages
 changes, creates commits, browses commit history, and manages local branches
-safely. It also signs in to GitHub in the system browser, validates a PKCE and
+safely. It fetches, pulls, and pushes local or authenticated GitHub HTTPS
+remotes without freezing the UI, with streamed progress and recoverable error
+states. It also signs in to GitHub in the system browser, validates a PKCE and
 state-protected loopback callback, retrieves the current account, and stores
 the OAuth session only in the operating system keyring. Git and authentication
 logic live in independently tested Rust crates; the React UI talks to them only
@@ -58,8 +60,9 @@ instructions, including GitHub OAuth App configuration.
   branch discovery, branch search, creation, safe switching and deletion,
   browser-based GitHub OAuth, PKCE/state validation, an ephemeral loopback
   callback, current-user display, Secret Service/native keyring persistence,
-  logout, tests, and CI.
-- Next: authenticated fetch, pull, and push (Milestone 6).
-- Not yet implemented: remote Git operations, cloning, and production packaging
-  polish.
+  logout, authenticated HTTPS fetch/pull/push, progress reporting, safe
+  fast-forward/merge handling, tests, and CI.
+- Next: repository discovery and cloning (Milestone 7).
+- Not yet implemented: cloning, GitHub repository browsing, and production
+  packaging polish.
 

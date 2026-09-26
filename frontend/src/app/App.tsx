@@ -8,6 +8,7 @@ import { CommitForm } from "../features/commit/CommitForm";
 import { DiffViewer } from "../features/diff/DiffViewer";
 import { HistoryPanel } from "../features/history/HistoryPanel";
 import { RepositoryHeader } from "../features/repositories/RepositoryHeader";
+import { RemoteControls } from "../features/remotes/RemoteControls";
 import { useRepository } from "../features/repositories/useRepository";
 import { WelcomeView } from "../features/repositories/WelcomeView";
 import { tauriAuthService, type AuthService } from "../services/authService";
@@ -19,6 +20,7 @@ import {
   tauriRepositoryService,
   type RepositoryService,
 } from "../services/repositoryService";
+import { tauriRemoteService, type RemoteService } from "../services/remoteService";
 import {
   tauriStagingService,
   type StagingService,
@@ -32,6 +34,7 @@ interface AppProps {
   commitService?: CommitService;
   branchService?: BranchService;
   historyService?: HistoryService;
+  remoteService?: RemoteService;
 }
 
 export function App({
@@ -42,6 +45,7 @@ export function App({
   commitService = tauriCommitService,
   branchService = tauriBranchService,
   historyService = tauriHistoryService,
+  remoteService = tauriRemoteService,
 }: AppProps) {
   const [workspaceView, setWorkspaceView] = useState<"changes" | "history">(
     "changes",
@@ -65,6 +69,14 @@ export function App({
           <BranchPicker
             repository={state.repository}
             service={branchService}
+            onUpdated={state.updateRepository}
+          />
+        }
+        remoteControl={
+          <RemoteControls
+            repository={state.repository}
+            repositoryRevision={state.revision}
+            service={remoteService}
             onUpdated={state.updateRepository}
           />
         }

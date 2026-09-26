@@ -48,10 +48,10 @@ The authorization code is instead protected by:
 - a five-minute overall timeout and bounded callback request parsing;
 - exact callback path and HTTP method validation.
 
-The requested scopes are `repo offline_access`. `repo` prepares the account for
-the authenticated HTTPS Git operations planned for Milestone 6;
+The requested scopes are `repo offline_access`. `repo` authorizes the
+authenticated HTTPS Git operations implemented in Milestone 6;
 `offline_access` requests refresh-token support when token expiration is enabled
-for the OAuth App. No remote Git operation is implemented in Milestone 5.
+for the OAuth App.
 
 References:
 
@@ -92,6 +92,15 @@ The complete OAuth token set is serialized only in memory and passed to the
 on Fedora/Linux its native backend talks to Secret Service over zbus. Tokens
 are never written to application configuration, Git configuration, SQLite,
 frontend storage, remote URLs, process arguments, or logs.
+
+For fetch, pull, and push, the desktop command requests an access token only
+after the Git backend classifies the active remote as credential-free GitHub
+HTTPS. The token stays in a backend `SecretString`, is passed to libgit2's
+credential callback as the HTTPS password, and is discarded after the worker
+finishes. Redirects and credential-bearing remote URLs are rejected to prevent
+credential forwarding. GitHub documents that HTTPS Git accepts a personal or
+OAuth token in the password position with a nonempty username; Branchcraft uses
+the conventional `x-access-token` username.
 
 Logout cancels a pending login and deletes the local keyring item. It does not
 revoke the OAuth App authorization on GitHub; users can revoke that grant in

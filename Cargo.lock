@@ -364,6 +364,7 @@ dependencies = [
  "branchcraft-git",
  "branchcraft-github",
  "branchcraft-storage",
+ "secrecy",
  "serde",
  "tauri",
  "tauri-build",
@@ -408,7 +409,9 @@ dependencies = [
  "branchcraft-app-core",
  "branchcraft-test-support",
  "git2",
+ "secrecy",
  "tempfile",
+ "url",
 ]
 
 [[package]]

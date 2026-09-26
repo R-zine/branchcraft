@@ -7,6 +7,7 @@ interface RepositoryHeaderProps {
   repository: RepositorySnapshot | null;
   loading: boolean;
   branchControl: ReactNode;
+  remoteControl: ReactNode;
   accountControl: ReactNode;
   onOpen: () => void;
   onRefresh: () => void;
@@ -16,6 +17,7 @@ export function RepositoryHeader({
   repository,
   loading,
   branchControl,
+  remoteControl,
   accountControl,
   onOpen,
   onRefresh,
@@ -39,6 +41,8 @@ export function RepositoryHeader({
       <div className="header-spacer" />
 
       {branchControl}
+
+      {remoteControl}
 
       <button
         aria-label="Refresh repository"

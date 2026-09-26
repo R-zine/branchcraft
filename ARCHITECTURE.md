@@ -17,7 +17,8 @@ Ownership is intentionally split by directory:
 | Frontend IPC | `frontend/src/services` | The only location for raw Tauri invocation |
 | Test fixtures | `crates/test-support` | Reusable, offline temporary repositories |
 
-Credentials never cross the Tauri command boundary. Future remote Git behavior
-must request credentials through `AuthService` and must never place them in a
-remote URL.
+Credentials never cross the Tauri command boundary. Remote Git behavior
+requests an ephemeral `SecretString` through `AuthService` and supplies it to
+libgit2's credential callback only for exact, credential-free
+`https://github.com` remotes. Tokens are never placed in a remote URL.
 

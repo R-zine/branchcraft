@@ -4,12 +4,15 @@ mod branches;
 mod diff;
 mod history;
 mod mutations;
+mod remote;
 
 use branchcraft_app_core::{
     BranchInfo, BranchOperationResult, BranchSummary, ChangeKind, CommitHistory, CommitResult,
-    Diff, FileStatus, GitError, GitErrorKind, RepositoryId, RepositorySnapshot,
+    Diff, FileStatus, GitError, GitErrorKind, RemoteInfo, RemoteOperationResult, RemoteProgress,
+    RepositoryId, RepositorySnapshot,
 };
 use git2::{ErrorClass, ErrorCode, Repository, Status, StatusOptions};
+use secrecy::SecretString;
 use std::path::{Component, PathBuf};
 use std::{fs, io, path::Path};
 
@@ -122,6 +125,55 @@ pub trait GitService: Send + Sync {
     /// Returns a structured error when deletion would be unsafe or the branch
     /// cannot be updated.
     fn delete_branch(&self, path: &Path, name: &str) -> Result<BranchOperationResult, GitError>;
+
+    /// Returns the current branch's upstream remote, preferring `origin` when
+    /// no upstream is configured.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when repository remote configuration cannot
+    /// be inspected. A repository without remotes returns `None`.
+    fn primary_remote(&self, path: &Path) -> Result<Option<RemoteInfo>, GitError>;
+
+    /// Downloads objects and updates remote-tracking references.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured remote, authentication, network, or repository
+    /// error without exposing credentials or server payloads.
+    fn fetch(
+        &self,
+        path: &Path,
+        token: Option<&SecretString>,
+        progress: &mut dyn FnMut(RemoteProgress),
+    ) -> Result<RemoteOperationResult, GitError>;
+
+    /// Fetches and integrates the upstream branch using fast-forward or a safe
+    /// merge commit.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error for dirty worktrees, conflicts, detached
+    /// heads, missing identity, authentication, or network failures.
+    fn pull(
+        &self,
+        path: &Path,
+        token: Option<&SecretString>,
+        progress: &mut dyn FnMut(RemoteProgress),
+    ) -> Result<RemoteOperationResult, GitError>;
+
+    /// Pushes the current local branch to its configured upstream.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error for rejected/non-fast-forward updates,
+    /// detached heads, authentication, or network failures.
+    fn push(
+        &self,
+        path: &Path,
+        token: Option<&SecretString>,
+        progress: &mut dyn FnMut(RemoteProgress),
+    ) -> Result<RemoteOperationResult, GitError>;
 }
 
 /// libgit2-backed implementation of [`GitService`].
@@ -241,6 +293,37 @@ impl GitService for LibGitService {
     fn delete_branch(&self, path: &Path, name: &str) -> Result<BranchOperationResult, GitError> {
         branches::delete(path, name)?;
         Self::branch_operation_result(path)
+    }
+
+    fn primary_remote(&self, path: &Path) -> Result<Option<RemoteInfo>, GitError> {
+        remote::primary_remote(path)
+    }
+
+    fn fetch(
+        &self,
+        path: &Path,
+        token: Option<&SecretString>,
+        progress: &mut dyn FnMut(RemoteProgress),
+    ) -> Result<RemoteOperationResult, GitError> {
+        remote::fetch(path, token, progress)
+    }
+
+    fn pull(
+        &self,
+        path: &Path,
+        token: Option<&SecretString>,
+        progress: &mut dyn FnMut(RemoteProgress),
+    ) -> Result<RemoteOperationResult, GitError> {
+        remote::pull(path, token, progress)
+    }
+
+    fn push(
+        &self,
+        path: &Path,
+        token: Option<&SecretString>,
+        progress: &mut dyn FnMut(RemoteProgress),
+    ) -> Result<RemoteOperationResult, GitError> {
+        remote::push(path, token, progress)
     }
 }
 

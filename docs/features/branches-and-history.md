@@ -11,8 +11,8 @@ the desktop UI responsive.
 The header branch picker lists and searches local and remote-tracking branches.
 Users can create a local branch at the current commit or switch to another
 local branch. Creation intentionally leaves the current branch unchanged.
-Remote-tracking branches are visible for context but read-only until remote
-workflows are implemented.
+Remote-tracking branches are visible for context and remain read-only in the
+branch picker; fetch, pull, and push update them through the remote workflow.
 
 Deleting a local branch requires an explicit confirmation. The backend rejects
 the current branch and branches with commits that are not merged into the

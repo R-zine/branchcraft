@@ -10,6 +10,8 @@ repository.workspace = true
 [dependencies]
 branchcraft-app-core = { path = "../app-core" }
 git2.workspace = true
+secrecy.workspace = true
+url.workspace = true
 
 [dev-dependencies]
 branchcraft-test-support = { path = "../test-support" }

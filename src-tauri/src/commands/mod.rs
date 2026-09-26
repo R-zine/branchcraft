@@ -3,6 +3,7 @@ pub mod branches;
 pub mod commits;
 pub mod diffs;
 pub mod history;
+pub mod remotes;
 pub mod repositories;
 pub mod staging;
 
