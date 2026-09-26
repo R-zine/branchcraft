@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { DiffService } from "../services/diffService";
 import type { RepositoryService } from "../services/repositoryService";
+import type { StagingService } from "../services/stagingService";
 import type { FileDiff } from "../types/diff";
 import type { RepositorySnapshot } from "../types/repository";
 import { App } from "./App";
@@ -68,6 +69,29 @@ function service() {
   };
 }
 
+function stagingService() {
+  const stagedRepository: RepositorySnapshot = {
+    ...repository,
+    files: repository.files.map((file) => ({
+      ...file,
+      staged: "modified" as const,
+      unstaged: null,
+    })),
+  };
+  const stageFile = vi
+    .fn<StagingService["stageFile"]>()
+    .mockResolvedValue(stagedRepository);
+  return {
+    service: {
+      stageFile,
+      unstageFile: vi.fn(),
+      stageAll: vi.fn(),
+      unstageAll: vi.fn(),
+    } satisfies StagingService,
+    stageFile,
+  };
+}
+
 describe("Branchcraft app", () => {
   it("opens a selected repository and renders its status", async () => {
     const { repositoryService, openRepository } = service();
@@ -108,6 +132,34 @@ describe("Branchcraft app", () => {
     });
     expect(openRepository).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "Open a local repository" })).toBeDefined();
+  });
+
+  it("applies the refreshed snapshot after staging a file", async () => {
+    const { repositoryService } = service();
+    const staging = stagingService();
+    render(
+      <App
+        repositoryService={repositoryService}
+        diffService={diffService()}
+        stagingService={staging.service}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /^open repository$/i }),
+    );
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "Stage src/main.rs",
+    });
+    fireEvent.click(checkbox);
+
+    expect(
+      await screen.findByRole("checkbox", { name: "Unstage src/main.rs" }),
+    ).toBeDefined();
+    expect(staging.stageFile).toHaveBeenCalledWith(
+      "/work/branchcraft",
+      "src/main.rs",
+    );
   });
 });
 

@@ -28,11 +28,26 @@ export interface RepositorySnapshot {
   files: FileStatus[];
 }
 
+export interface CommitInfo {
+  id: string;
+  shortId: string;
+  summary: string;
+}
+
+export interface CommitResult {
+  commit: CommitInfo;
+  repository: RepositorySnapshot;
+}
+
 export type GitErrorKind =
   | "notRepository"
   | "permissionDenied"
   | "repositoryNotFound"
   | "invalidPath"
+  | "invalidInput"
+  | "conflict"
+  | "nothingStaged"
+  | "missingIdentity"
   | "unknown";
 
 export interface GitError {

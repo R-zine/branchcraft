@@ -1,25 +1,41 @@
 import { ErrorBanner } from "../components/ErrorBanner";
 import { ChangesPanel } from "../features/changes/ChangesPanel";
+import { useStaging } from "../features/changes/useStaging";
+import { CommitForm } from "../features/commit/CommitForm";
 import { DiffViewer } from "../features/diff/DiffViewer";
 import { RepositoryHeader } from "../features/repositories/RepositoryHeader";
 import { useRepository } from "../features/repositories/useRepository";
 import { WelcomeView } from "../features/repositories/WelcomeView";
+import { tauriCommitService, type CommitService } from "../services/commitService";
+import { tauriDiffService, type DiffService } from "../services/diffService";
 import {
   tauriRepositoryService,
   type RepositoryService,
 } from "../services/repositoryService";
-import { tauriDiffService, type DiffService } from "../services/diffService";
+import {
+  tauriStagingService,
+  type StagingService,
+} from "../services/stagingService";
 
 interface AppProps {
   repositoryService?: RepositoryService;
   diffService?: DiffService;
+  stagingService?: StagingService;
+  commitService?: CommitService;
 }
 
 export function App({
   repositoryService = tauriRepositoryService,
   diffService = tauriDiffService,
+  stagingService = tauriStagingService,
+  commitService = tauriCommitService,
 }: AppProps) {
   const state = useRepository(repositoryService);
+  const staging = useStaging(
+    stagingService,
+    state.repository?.path ?? null,
+    state.updateRepository,
+  );
   const selectedFile =
     state.repository?.files.find((file) => file.path === state.selectedPath) ??
     null;
@@ -48,15 +64,33 @@ export function App({
         />
       ) : (
         <main className="workspace">
-          <ChangesPanel
-            files={state.repository.files}
-            selectedPath={state.selectedPath}
-            onSelect={state.selectPath}
-          />
+          <div className="changes-column">
+            <ChangesPanel
+              files={state.repository.files}
+              selectedPath={state.selectedPath}
+              busy={staging.busy}
+              pendingPath={staging.pendingPath}
+              error={staging.error}
+              onSelect={state.selectPath}
+              onStageFile={(path) => void staging.stageFile(path)}
+              onUnstageFile={(path) => void staging.unstageFile(path)}
+              onStageAll={() => void staging.stageAll()}
+              onUnstageAll={() => void staging.unstageAll()}
+              onDismissError={staging.dismissError}
+            />
+            <CommitForm
+              key={state.repository.id}
+              repository={state.repository}
+              service={commitService}
+              disabled={staging.busy}
+              onCommitted={state.updateRepository}
+            />
+          </div>
           <DiffViewer
             repositoryPath={state.repository.path}
             file={selectedFile}
             service={diffService}
+            repositoryRevision={state.revision}
           />
         </main>
       )}

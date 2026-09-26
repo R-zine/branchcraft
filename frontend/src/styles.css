@@ -254,12 +254,19 @@ button:focus-visible {
   grid-template-columns: 290px minmax(0, 1fr);
 }
 
-.changes-panel {
+.changes-column {
   display: flex;
   min-height: 0;
   flex-direction: column;
   border-right: 1px solid var(--border);
   background: #11161e;
+}
+
+.changes-panel {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
 }
 
 .panel-heading {
@@ -273,8 +280,15 @@ button:focus-visible {
 .panel-heading > div {
   display: flex;
   width: 100%;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.panel-heading > div > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
 }
 
 .panel-heading h2 {
@@ -288,6 +302,68 @@ button:focus-visible {
   font-size: 10px;
 }
 
+.bulk-actions {
+  display: flex;
+  gap: 3px;
+}
+
+.bulk-actions button {
+  padding: 3px 5px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 8.5px;
+  cursor: pointer;
+}
+
+.bulk-actions button:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.bulk-actions button:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.staging-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px 7px 12px;
+  border-bottom: 1px solid #573038;
+  background: var(--danger-bg);
+  color: #f4c5c8;
+  font-size: 9.5px;
+}
+
+.staging-error button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.staging-error > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.staging-error strong,
+.staging-error span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.staging-error span {
+  color: #c89ba0;
+  font-size: 8.5px;
+}
+
 .file-list {
   margin: 0;
   padding: 7px;
@@ -295,28 +371,67 @@ button:focus-visible {
   list-style: none;
 }
 
-.file-list button {
+.file-list li {
   display: grid;
   width: 100%;
   min-height: 45px;
   align-items: center;
-  grid-template-columns: 18px 18px minmax(0, 1fr);
-  gap: 8px;
-  padding: 5px 8px;
+  grid-template-columns: 25px minmax(0, 1fr);
   border: 1px solid transparent;
   border-radius: 5px;
   background: transparent;
+}
+
+.file-list li:hover {
+  background: var(--bg-elevated);
+}
+
+.file-list li.selected {
+  border-color: #355661;
+  background: var(--selection);
+}
+
+.file-list .file-select {
+  display: grid;
+  min-width: 0;
+  min-height: 43px;
+  align-items: center;
+  grid-template-columns: 18px 18px minmax(0, 1fr);
+  gap: 8px;
+  padding: 5px 8px 5px 3px;
+  border: 0;
+  background: transparent;
+  color: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.file-list button:hover {
-  background: var(--bg-elevated);
+.stage-toggle {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  margin-left: 7px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.file-list button.selected {
-  border-color: #355661;
-  background: var(--selection);
+.stage-toggle[aria-checked="true"],
+.stage-toggle[aria-checked="mixed"] {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.stage-toggle:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 
 .file-list .icon {
@@ -400,6 +515,126 @@ button:focus-visible {
   border: 1px solid #37634a;
   border-radius: 50%;
   color: var(--success);
+}
+
+.commit-form {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-raised);
+}
+
+.commit-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.commit-heading strong {
+  font-size: 11px;
+}
+
+.commit-heading span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.commit-form input,
+.commit-form textarea {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 10.5px;
+}
+
+.commit-form input {
+  height: 31px;
+  padding: 0 9px;
+}
+
+.commit-form textarea {
+  min-height: 47px;
+  max-height: 96px;
+  padding: 7px 9px;
+  resize: vertical;
+}
+
+.commit-form input:focus,
+.commit-form textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.commit-form input:disabled,
+.commit-form textarea:disabled {
+  opacity: 0.55;
+}
+
+.commit-form input::placeholder,
+.commit-form textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.commit-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.commit-message {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.commit-message.error {
+  background: var(--danger-bg);
+  color: #f4c5c8;
+}
+
+.commit-message.success {
+  background: var(--diff-added);
+  color: var(--success);
+}
+
+.commit-message span {
+  opacity: 0.78;
+}
+
+.commit-button {
+  min-height: 32px;
+  padding: 0 10px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 5px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 10.5px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.commit-button:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.commit-button:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 
 .file-inspector {
@@ -726,6 +961,7 @@ button:focus-visible {
   }
 
   .app-header,
+  .changes-column,
   .changes-panel,
   .status-bar,
   .inspector-header {

@@ -7,7 +7,7 @@ use git2::{DiffOptions, ErrorCode, ObjectType, Oid, Patch, Repository};
 use std::{
     fs::{self, File},
     io::{self, Read},
-    path::{Component, Path, PathBuf},
+    path::Path,
 };
 
 /// Maximum bytes loaded from either side of a file diff.
@@ -40,13 +40,13 @@ impl LoadedContent {
 pub(super) fn file_diff(repository_path: &Path, file_path: &str) -> Result<Diff, GitError> {
     let selected_path = canonical_directory(repository_path)?;
     let repository = Repository::open(selected_path).map_err(|error| map_open_error(&error))?;
-    let relative_path = validate_relative_path(file_path)?;
+    let relative_path = super::validate_relative_path(file_path)?;
     let status = changed_files(&repository)?
         .into_iter()
         .find(|candidate| candidate.path == file_path)
         .ok_or_else(changed_file_missing)?;
     let old_display_path = status.previous_path.as_deref().unwrap_or(file_path);
-    let old_relative_path = validate_relative_path(old_display_path)?;
+    let old_relative_path = super::validate_relative_path(old_display_path)?;
 
     let old = load_head_content(&repository, &old_relative_path)?;
     let new = load_new_content(&repository, &relative_path, &status)?;
@@ -95,22 +95,6 @@ pub(super) fn file_diff(repository_path: &Path, file_path: &str) -> Result<Diff,
         },
         hunks,
     })
-}
-
-fn validate_relative_path(path: &str) -> Result<PathBuf, GitError> {
-    if path.is_empty()
-        || path.contains('\0')
-        || Path::new(path)
-            .components()
-            .any(|component| !matches!(component, Component::Normal(_)))
-    {
-        return Err(GitError::new(
-            GitErrorKind::InvalidPath,
-            "The selected file path is invalid.",
-            Some("Choose a file reported by the current repository status.".to_owned()),
-        ));
-    }
-    Ok(PathBuf::from(path))
 }
 
 fn load_head_content(

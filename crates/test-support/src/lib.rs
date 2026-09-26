@@ -66,6 +66,16 @@ impl TestRepository {
         fs::write(path, contents).expect("write fixture file");
     }
 
+    /// Reads a UTF-8 fixture file relative to the repository root.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the fixture file cannot be read as UTF-8.
+    #[must_use]
+    pub fn read(&self, relative_path: &str) -> String {
+        fs::read_to_string(self.path().join(relative_path)).expect("read fixture file")
+    }
+
     /// Removes a fixture file.
     ///
     /// # Panics
@@ -113,6 +123,53 @@ impl TestRepository {
         repository
             .set_head_detached(commit)
             .expect("detach fixture HEAD");
+    }
+
+    /// Configures a repository-local commit identity.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the local Git configuration cannot be updated.
+    pub fn configure_identity(&self, name: &str, email: &str) {
+        let repository = Repository::open(self.path()).expect("open fixture repository");
+        let mut config = repository.config().expect("open fixture config");
+        config.set_str("user.name", name).expect("set fixture name");
+        config
+            .set_str("user.email", email)
+            .expect("set fixture email");
+    }
+
+    /// Overrides inherited identity values with invalid local values.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the fixture configuration cannot be updated.
+    pub fn clear_identity(&self) {
+        let repository = Repository::open(self.path()).expect("open fixture repository");
+        let config_path = repository.path().join("config");
+        let mut config = git2::Config::open(&config_path).expect("open local fixture config");
+        config.set_str("user.name", "").expect("clear fixture name");
+        config
+            .set_str("user.email", "")
+            .expect("clear fixture email");
+    }
+
+    /// Returns the complete message of the current fixture commit.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `HEAD` does not resolve to a commit with a UTF-8 message.
+    #[must_use]
+    pub fn head_message(&self) -> String {
+        let repository = Repository::open(self.path()).expect("open fixture repository");
+        repository
+            .head()
+            .expect("find fixture HEAD")
+            .peel_to_commit()
+            .expect("resolve fixture commit")
+            .message()
+            .expect("read fixture commit message")
+            .to_owned()
     }
 
     /// Stages one fixture path.

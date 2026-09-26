@@ -14,6 +14,6 @@ staged change, optional unstaged change, and conflict flag. The backend is the
 source of truth. The frontend only maps these values to concise labels and
 colors.
 
-Ignored and unmodified files are excluded. Staging actions and diff contents
-belong to later milestones.
+Ignored and unmodified files are excluded. Milestone 3 adds staging controls on
+top of this contract without collapsing mixed index/worktree state.
 

@@ -17,6 +17,7 @@ interface DiffViewerProps {
   repositoryPath: string;
   file: FileStatus | null;
   service: DiffService;
+  repositoryRevision?: number;
 }
 
 type ViewMode = "split" | "inline";
@@ -62,11 +63,17 @@ function DiffFallback({ diff }: { diff: FileDiff }) {
   );
 }
 
-export function DiffViewer({ repositoryPath, file, service }: DiffViewerProps) {
+export function DiffViewer({
+  repositoryPath,
+  file,
+  service,
+  repositoryRevision = 0,
+}: DiffViewerProps) {
   const { diff, error, loading, reload } = useFileDiff(
     service,
     repositoryPath,
     file?.path ?? null,
+    repositoryRevision,
   );
   const container = useRef<HTMLDivElement>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("split");

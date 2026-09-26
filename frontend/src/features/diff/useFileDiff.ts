@@ -20,6 +20,7 @@ export function useFileDiff(
   service: DiffService,
   repositoryPath: string | null,
   filePath: string | null,
+  repositoryRevision = 0,
 ): FileDiffState {
   const [diff, setDiff] = useState<FileDiff | null>(null);
   const [error, setError] = useState<GitError | null>(null);
@@ -63,7 +64,7 @@ export function useFileDiff(
     return () => {
       active = false;
     };
-  }, [filePath, repositoryPath, revision, service]);
+  }, [filePath, repositoryPath, repositoryRevision, revision, service]);
 
   const reload = useCallback(() => {
     setRevision((current) => current + 1);

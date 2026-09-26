@@ -3,9 +3,9 @@
 ## Scope
 
 This document records the foundation selected on 2026-09-26 and the
-Milestones 0–2 implementation. The application is an offline-capable local Git
-client with bounded, structured local-change diffs. OAuth, secrets, network
-Git, and cloning are not part of the compiled application yet.
+Milestones 0–3 implementation. The application is an offline-capable local Git
+client with bounded diffs, index staging, and local commit creation. OAuth,
+secrets, network Git, and cloning are not part of the compiled application yet.
 
 ## Dependency baseline
 
@@ -86,20 +86,27 @@ DiffViewer -> Monaco adapter    libgit2 + bounded file reads
 Monaco is a lazy frontend chunk. Binary, oversized, and unsupported files do
 not load it and receive dedicated fallback UI.
 
+Staging and commits follow the same typed path. Mutation commands return a new
+`RepositorySnapshot`, which replaces repository state and invalidates the
+selected diff without introducing a global store. Index and commit work is
+performed by libgit2 on blocking workers; the frontend never constructs Git
+commands or edits `.git` directly.
+
 ## Rust workspace ownership
 
 ### `branchcraft-app-core`
 
 Owns serializable domain models: repository identity, branch state, per-file
-index/worktree status, structured file diffs, and safe error categories. It has
-no dependency on Git, Tauri, Monaco, or a platform secret store.
+index/worktree status, structured file diffs, commit results, and safe error
+categories. It has no dependency on Git, Tauri, Monaco, or a platform secret
+store.
 
 ### `branchcraft-git`
 
 Owns `GitService` and the libgit2 implementation. It opens a canonical path,
 detects normal/detached/unborn HEAD states, preserves staged and unstaged status
-independently, and generates bounded `HEAD`-to-worktree file diffs. It has no
-knowledge of IPC or UI.
+independently, generates bounded `HEAD`-to-worktree file diffs, updates the
+index, and creates commits from the index. It has no knowledge of IPC or UI.
 
 ### `branchcraft-test-support`
 
@@ -115,11 +122,13 @@ and testable. The native dialog permission is explicitly limited to opening.
 ## Frontend ownership
 
 - `features/repositories` owns repository loading and header/welcome UI.
-- `features/changes` owns file status presentation and selection.
+- `features/changes` owns file status presentation, selection, and staging
+  state.
+- `features/commit` owns commit form state and validation.
 - `features/diff` owns diff loading, fallback states, responsive layout, and the
   Monaco adapter.
-- `services/repositoryService.ts` and `services/diffService.ts` are the only raw
-  `invoke()` boundaries.
+- Files under `services` are the only raw `invoke()` boundaries, including the
+  repository, diff, staging, and commit services.
 - `types/repository.ts` and `types/diff.ts` mirror the serde IPC contracts.
 - `components` contains presentation-only primitives, not domain behavior.
 
@@ -138,9 +147,13 @@ own state rather than expanding a universal store.
   prevents resolved working-tree files from escaping the repository root.
 - Diff content is capped at 2 MiB per side and binary/unsupported content never
   crosses IPC.
+- Staging paths use the same normal-relative-path validation as diffs. Index
+  mutations never invoke a shell or alter working-tree content while unstaging.
+- Commits use the effective repository Git configuration for author/committer
+  identity. Branchcraft never invents or rewrites identity settings.
 - Raw libgit2 errors are mapped to structured categories instead of being shown
   or logged verbatim.
-- No credential system is active in Milestones 0–2. When introduced, the auth
+- No credential system is active in Milestones 0–3. When introduced, the auth
   crate will receive only a `SecretStore` abstraction backed by Secret Service;
   access tokens will never enter frontend models or Git remote URLs.
 

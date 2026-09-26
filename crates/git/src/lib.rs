@@ -1,12 +1,14 @@
 //! Git operations for Branchcraft, isolated from the desktop shell.
 
 mod diff;
+mod mutations;
 
 use branchcraft_app_core::{
-    BranchInfo, ChangeKind, Diff, FileStatus, GitError, GitErrorKind, RepositoryId,
+    BranchInfo, ChangeKind, CommitResult, Diff, FileStatus, GitError, GitErrorKind, RepositoryId,
     RepositorySnapshot,
 };
 use git2::{ErrorClass, ErrorCode, Repository, Status, StatusOptions};
+use std::path::{Component, PathBuf};
 use std::{fs, io, path::Path};
 
 /// Boundary used by Tauri and by tests. Future Git operations extend this trait.
@@ -34,6 +36,51 @@ pub trait GitService: Send + Sync {
     /// Returns a structured error when the repository or path is invalid, the
     /// file is no longer changed, or libgit2 cannot compare the content.
     fn diff(&self, path: &Path, file_path: &str) -> Result<Diff, GitError>;
+
+    /// Stages the current working-tree state of one changed file.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when the path is invalid or the index cannot
+    /// be updated.
+    fn stage_file(&self, path: &Path, file_path: &str) -> Result<RepositorySnapshot, GitError>;
+
+    /// Restores one staged file in the index to its `HEAD` state.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when the path is invalid or the index cannot
+    /// be updated.
+    fn unstage_file(&self, path: &Path, file_path: &str) -> Result<RepositorySnapshot, GitError>;
+
+    /// Stages every current working-tree change.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when repository files cannot be read or the
+    /// index cannot be updated.
+    fn stage_all(&self, path: &Path) -> Result<RepositorySnapshot, GitError>;
+
+    /// Restores the complete index to `HEAD` without changing working files.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when the repository or index cannot be
+    /// updated.
+    fn unstage_all(&self, path: &Path) -> Result<RepositorySnapshot, GitError>;
+
+    /// Creates a commit from the current index using the repository Git identity.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error for invalid input, missing identity, an empty
+    /// index, unresolved conflicts, or a failed commit write.
+    fn commit(
+        &self,
+        path: &Path,
+        summary: &str,
+        description: Option<&str>,
+    ) -> Result<CommitResult, GitError>;
 }
 
 /// libgit2-backed implementation of [`GitService`].
@@ -91,6 +138,39 @@ impl GitService for LibGitService {
     fn diff(&self, path: &Path, file_path: &str) -> Result<Diff, GitError> {
         diff::file_diff(path, file_path)
     }
+
+    fn stage_file(&self, path: &Path, file_path: &str) -> Result<RepositorySnapshot, GitError> {
+        mutations::stage_file(path, file_path)?;
+        Self::snapshot(path)
+    }
+
+    fn unstage_file(&self, path: &Path, file_path: &str) -> Result<RepositorySnapshot, GitError> {
+        mutations::unstage_file(path, file_path)?;
+        Self::snapshot(path)
+    }
+
+    fn stage_all(&self, path: &Path) -> Result<RepositorySnapshot, GitError> {
+        mutations::stage_all(path)?;
+        Self::snapshot(path)
+    }
+
+    fn unstage_all(&self, path: &Path) -> Result<RepositorySnapshot, GitError> {
+        mutations::unstage_all(path)?;
+        Self::snapshot(path)
+    }
+
+    fn commit(
+        &self,
+        path: &Path,
+        summary: &str,
+        description: Option<&str>,
+    ) -> Result<CommitResult, GitError> {
+        let commit = mutations::commit(path, summary, description)?;
+        Ok(CommitResult {
+            commit,
+            repository: Self::snapshot(path)?,
+        })
+    }
 }
 
 pub use diff::MAX_DIFF_FILE_BYTES;
@@ -113,6 +193,22 @@ fn canonical_directory(path: &Path) -> Result<std::path::PathBuf, GitError> {
         ));
     }
     Ok(canonical)
+}
+
+fn validate_relative_path(path: &str) -> Result<PathBuf, GitError> {
+    if path.is_empty()
+        || path.contains('\0')
+        || Path::new(path)
+            .components()
+            .any(|component| !matches!(component, Component::Normal(_)))
+    {
+        return Err(GitError::new(
+            GitErrorKind::InvalidPath,
+            "The selected file path is invalid.",
+            Some("Choose a file reported by the current repository status.".to_owned()),
+        ));
+    }
+    Ok(PathBuf::from(path))
 }
 
 fn current_branch(repository: &Repository) -> Result<BranchInfo, GitError> {

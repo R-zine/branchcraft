@@ -26,9 +26,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
+            commands::commits::create_commit,
             commands::diffs::get_file_diff,
             commands::repositories::open_repository,
-            commands::repositories::refresh_repository
+            commands::repositories::refresh_repository,
+            commands::staging::stage_file,
+            commands::staging::unstage_file,
+            commands::staging::stage_all,
+            commands::staging::unstage_all
         ])
         .run(tauri::generate_context!())
         .expect("error while running Branchcraft");

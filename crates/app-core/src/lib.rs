@@ -128,6 +128,23 @@ pub struct Diff {
     pub hunks: Vec<DiffHunk>,
 }
 
+/// Metadata returned after Branchcraft creates a local commit.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitInfo {
+    pub id: String,
+    pub short_id: String,
+    pub summary: String,
+}
+
+/// The new commit together with the repository state that follows it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitResult {
+    pub commit: CommitInfo,
+    pub repository: RepositorySnapshot,
+}
+
 /// Error categories that frontend recovery UI can act on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -136,6 +153,10 @@ pub enum GitErrorKind {
     PermissionDenied,
     RepositoryNotFound,
     InvalidPath,
+    InvalidInput,
+    Conflict,
+    NothingStaged,
+    MissingIdentity,
     Unknown,
 }
 
