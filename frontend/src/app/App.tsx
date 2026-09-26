@@ -1,13 +1,18 @@
+import { useState } from "react";
 import { ErrorBanner } from "../components/ErrorBanner";
+import { BranchPicker } from "../features/branches/BranchPicker";
 import { ChangesPanel } from "../features/changes/ChangesPanel";
 import { useStaging } from "../features/changes/useStaging";
 import { CommitForm } from "../features/commit/CommitForm";
 import { DiffViewer } from "../features/diff/DiffViewer";
+import { HistoryPanel } from "../features/history/HistoryPanel";
 import { RepositoryHeader } from "../features/repositories/RepositoryHeader";
 import { useRepository } from "../features/repositories/useRepository";
 import { WelcomeView } from "../features/repositories/WelcomeView";
 import { tauriCommitService, type CommitService } from "../services/commitService";
+import { tauriBranchService, type BranchService } from "../services/branchService";
 import { tauriDiffService, type DiffService } from "../services/diffService";
+import { tauriHistoryService, type HistoryService } from "../services/historyService";
 import {
   tauriRepositoryService,
   type RepositoryService,
@@ -22,6 +27,8 @@ interface AppProps {
   diffService?: DiffService;
   stagingService?: StagingService;
   commitService?: CommitService;
+  branchService?: BranchService;
+  historyService?: HistoryService;
 }
 
 export function App({
@@ -29,7 +36,12 @@ export function App({
   diffService = tauriDiffService,
   stagingService = tauriStagingService,
   commitService = tauriCommitService,
+  branchService = tauriBranchService,
+  historyService = tauriHistoryService,
 }: AppProps) {
+  const [workspaceView, setWorkspaceView] = useState<"changes" | "history">(
+    "changes",
+  );
   const state = useRepository(repositoryService);
   const staging = useStaging(
     stagingService,
@@ -45,6 +57,13 @@ export function App({
       <RepositoryHeader
         repository={state.repository}
         loading={state.loading}
+        branchControl={
+          <BranchPicker
+            repository={state.repository}
+            service={branchService}
+            onUpdated={state.updateRepository}
+          />
+        }
         onOpen={() => void state.openRepository()}
         onRefresh={() => void state.refreshRepository()}
       />
@@ -65,26 +84,54 @@ export function App({
       ) : (
         <main className="workspace">
           <div className="changes-column">
-            <ChangesPanel
-              files={state.repository.files}
-              selectedPath={state.selectedPath}
-              busy={staging.busy}
-              pendingPath={staging.pendingPath}
-              error={staging.error}
-              onSelect={state.selectPath}
-              onStageFile={(path) => void staging.stageFile(path)}
-              onUnstageFile={(path) => void staging.unstageFile(path)}
-              onStageAll={() => void staging.stageAll()}
-              onUnstageAll={() => void staging.unstageAll()}
-              onDismissError={staging.dismissError}
-            />
-            <CommitForm
-              key={state.repository.id}
-              repository={state.repository}
-              service={commitService}
-              disabled={staging.busy}
-              onCommitted={state.updateRepository}
-            />
+            <div className="workspace-tabs" role="tablist" aria-label="Repository view">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={workspaceView === "changes"}
+                onClick={() => setWorkspaceView("changes")}
+              >
+                Changes <span>{state.repository.files.length}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={workspaceView === "history"}
+                onClick={() => setWorkspaceView("history")}
+              >
+                History
+              </button>
+            </div>
+            {workspaceView === "changes" ? (
+              <>
+                <ChangesPanel
+                  files={state.repository.files}
+                  selectedPath={state.selectedPath}
+                  busy={staging.busy}
+                  pendingPath={staging.pendingPath}
+                  error={staging.error}
+                  onSelect={state.selectPath}
+                  onStageFile={(path) => void staging.stageFile(path)}
+                  onUnstageFile={(path) => void staging.unstageFile(path)}
+                  onStageAll={() => void staging.stageAll()}
+                  onUnstageAll={() => void staging.unstageAll()}
+                  onDismissError={staging.dismissError}
+                />
+                <CommitForm
+                  key={state.repository.id}
+                  repository={state.repository}
+                  service={commitService}
+                  disabled={staging.busy}
+                  onCommitted={state.updateRepository}
+                />
+              </>
+            ) : (
+              <HistoryPanel
+                repositoryPath={state.repository.path}
+                repositoryRevision={state.revision}
+                service={historyService}
+              />
+            )}
           </div>
           <DiffViewer
             repositoryPath={state.repository.path}

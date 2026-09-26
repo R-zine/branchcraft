@@ -1,10 +1,12 @@
 import { BrandMark } from "../../components/BrandMark";
 import { Icon } from "../../components/Icon";
 import type { RepositorySnapshot } from "../../types/repository";
+import type { ReactNode } from "react";
 
 interface RepositoryHeaderProps {
   repository: RepositorySnapshot | null;
   loading: boolean;
+  branchControl: ReactNode;
   onOpen: () => void;
   onRefresh: () => void;
 }
@@ -12,6 +14,7 @@ interface RepositoryHeaderProps {
 export function RepositoryHeader({
   repository,
   loading,
+  branchControl,
   onOpen,
   onRefresh,
 }: RepositoryHeaderProps) {
@@ -33,13 +36,7 @@ export function RepositoryHeader({
 
       <div className="header-spacer" />
 
-      <div className="branch-indicator">
-        <Icon name="branch" />
-        <span className="switcher-copy">
-          <span className="control-label">Current branch</span>
-          <strong>{repository?.branch.displayName ?? "—"}</strong>
-        </span>
-      </div>
+      {branchControl}
 
       <button
         aria-label="Refresh repository"

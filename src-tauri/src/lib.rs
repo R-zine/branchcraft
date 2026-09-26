@@ -26,8 +26,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
+            commands::branches::list_branches,
+            commands::branches::create_branch,
+            commands::branches::checkout_branch,
+            commands::branches::delete_branch,
             commands::commits::create_commit,
             commands::diffs::get_file_diff,
+            commands::history::get_commit_history,
             commands::repositories::open_repository,
             commands::repositories::refresh_repository,
             commands::staging::stage_file,

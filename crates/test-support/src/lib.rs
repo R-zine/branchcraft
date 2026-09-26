@@ -125,6 +125,28 @@ impl TestRepository {
             .expect("detach fixture HEAD");
     }
 
+    /// Creates a remote-tracking reference at the current commit.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `HEAD` cannot be resolved or the reference cannot be written.
+    pub fn add_remote_tracking_branch(&self, name: &str) {
+        let repository = Repository::open(self.path()).expect("open fixture repository");
+        let target = repository
+            .head()
+            .expect("find fixture HEAD")
+            .target()
+            .expect("resolve fixture HEAD");
+        repository
+            .reference(
+                &format!("refs/remotes/{name}"),
+                target,
+                false,
+                "fixture remote-tracking branch",
+            )
+            .expect("create fixture remote-tracking branch");
+    }
+
     /// Configures a repository-local commit identity.
     ///
     /// # Panics

@@ -145,6 +145,57 @@ pub struct CommitResult {
     pub repository: RepositorySnapshot,
 }
 
+/// One commit shown in the local repository history.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryCommit {
+    pub id: String,
+    pub short_id: String,
+    pub summary: String,
+    pub description: Option<String>,
+    pub author_name: String,
+    pub author_email: String,
+    pub authored_at: i64,
+    pub author_offset_minutes: i32,
+    pub parent_ids: Vec<String>,
+}
+
+/// A bounded page of commits reachable from the current `HEAD`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitHistory {
+    pub commits: Vec<HistoryCommit>,
+    pub truncated: bool,
+}
+
+/// Whether a branch is local or a remote-tracking reference.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum BranchKind {
+    Local,
+    Remote,
+}
+
+/// A branch reference suitable for presentation in the branch picker.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BranchSummary {
+    pub name: String,
+    pub kind: BranchKind,
+    pub current: bool,
+    pub target: String,
+    pub short_target: String,
+    pub upstream: Option<String>,
+}
+
+/// Repository and branch state returned after a branch mutation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BranchOperationResult {
+    pub repository: RepositorySnapshot,
+    pub branches: Vec<BranchSummary>,
+}
+
 /// Error categories that frontend recovery UI can act on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -155,8 +206,13 @@ pub enum GitErrorKind {
     InvalidPath,
     InvalidInput,
     Conflict,
+    DirtyWorkingTree,
     NothingStaged,
     MissingIdentity,
+    InvalidReference,
+    BranchAlreadyExists,
+    BranchNotFound,
+    UnsafeOperation,
     Unknown,
 }
 

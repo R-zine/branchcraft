@@ -1,11 +1,13 @@
 //! Git operations for Branchcraft, isolated from the desktop shell.
 
+mod branches;
 mod diff;
+mod history;
 mod mutations;
 
 use branchcraft_app_core::{
-    BranchInfo, ChangeKind, CommitResult, Diff, FileStatus, GitError, GitErrorKind, RepositoryId,
-    RepositorySnapshot,
+    BranchInfo, BranchOperationResult, BranchSummary, ChangeKind, CommitHistory, CommitResult,
+    Diff, FileStatus, GitError, GitErrorKind, RepositoryId, RepositorySnapshot,
 };
 use git2::{ErrorClass, ErrorCode, Repository, Status, StatusOptions};
 use std::path::{Component, PathBuf};
@@ -81,6 +83,45 @@ pub trait GitService: Send + Sync {
         summary: &str,
         description: Option<&str>,
     ) -> Result<CommitResult, GitError>;
+
+    /// Returns a bounded history reachable from the current `HEAD`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when the repository or commit graph cannot
+    /// be read.
+    fn history(&self, path: &Path) -> Result<CommitHistory, GitError>;
+
+    /// Lists local and remote-tracking branches.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when repository references cannot be read.
+    fn branches(&self, path: &Path) -> Result<Vec<BranchSummary>, GitError>;
+
+    /// Creates a local branch at the current `HEAD` without checking it out.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error for invalid or duplicate names, an unborn
+    /// `HEAD`, or an in-progress Git operation.
+    fn create_branch(&self, path: &Path, name: &str) -> Result<BranchOperationResult, GitError>;
+
+    /// Safely switches the worktree to an existing local branch.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when the branch is missing or local changes
+    /// would be overwritten.
+    fn checkout_branch(&self, path: &Path, name: &str) -> Result<BranchOperationResult, GitError>;
+
+    /// Deletes a non-current local branch only when it is merged into `HEAD`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when deletion would be unsafe or the branch
+    /// cannot be updated.
+    fn delete_branch(&self, path: &Path, name: &str) -> Result<BranchOperationResult, GitError>;
 }
 
 /// libgit2-backed implementation of [`GitService`].
@@ -122,6 +163,13 @@ impl LibGitService {
             path: root,
             branch: current_branch(&repository)?,
             files: changed_files(&repository)?,
+        })
+    }
+
+    fn branch_operation_result(path: &Path) -> Result<BranchOperationResult, GitError> {
+        Ok(BranchOperationResult {
+            repository: Self::snapshot(path)?,
+            branches: branches::list(path)?,
         })
     }
 }
@@ -170,6 +218,29 @@ impl GitService for LibGitService {
             commit,
             repository: Self::snapshot(path)?,
         })
+    }
+
+    fn history(&self, path: &Path) -> Result<CommitHistory, GitError> {
+        history::history(path)
+    }
+
+    fn branches(&self, path: &Path) -> Result<Vec<BranchSummary>, GitError> {
+        branches::list(path)
+    }
+
+    fn create_branch(&self, path: &Path, name: &str) -> Result<BranchOperationResult, GitError> {
+        branches::create(path, name)?;
+        Self::branch_operation_result(path)
+    }
+
+    fn checkout_branch(&self, path: &Path, name: &str) -> Result<BranchOperationResult, GitError> {
+        branches::checkout(path, name)?;
+        Self::branch_operation_result(path)
+    }
+
+    fn delete_branch(&self, path: &Path, name: &str) -> Result<BranchOperationResult, GitError> {
+        branches::delete(path, name)?;
+        Self::branch_operation_result(path)
     }
 }
 

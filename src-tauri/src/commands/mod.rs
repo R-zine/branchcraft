@@ -1,5 +1,7 @@
+pub mod branches;
 pub mod commits;
 pub mod diffs;
+pub mod history;
 pub mod repositories;
 pub mod staging;
 

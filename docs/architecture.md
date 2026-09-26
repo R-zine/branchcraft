@@ -3,9 +3,10 @@
 ## Scope
 
 This document records the foundation selected on 2026-09-26 and the
-Milestones 0–3 implementation. The application is an offline-capable local Git
-client with bounded diffs, index staging, and local commit creation. OAuth,
-secrets, network Git, and cloning are not part of the compiled application yet.
+Milestones 0–4 implementation. The application is an offline-capable local Git
+client with bounded diffs and history, index staging, local commit creation,
+and safe local branch management. OAuth, secrets, network Git, and cloning are
+not part of the compiled application yet.
 
 ## Dependency baseline
 
@@ -92,6 +93,17 @@ selected diff without introducing a global store. Index and commit work is
 performed by libgit2 on blocking workers; the frontend never constructs Git
 commands or edits `.git` directly.
 
+History and branch management use parallel feature-local boundaries:
+
+```text
+HistoryPanel -> useHistory -> HistoryService -> history command -> GitService
+BranchPicker -> useBranches -> BranchService -> branch commands -> GitService
+```
+
+History is read from `HEAD` with a 200-commit bound. Branch mutations return
+both the refreshed repository snapshot and branch list so the header, working
+tree, selected diff, and branch picker stay synchronized after a switch.
+
 ## Rust workspace ownership
 
 ### `branchcraft-app-core`
@@ -106,7 +118,9 @@ store.
 Owns `GitService` and the libgit2 implementation. It opens a canonical path,
 detects normal/detached/unborn HEAD states, preserves staged and unstaged status
 independently, generates bounded `HEAD`-to-worktree file diffs, updates the
-index, and creates commits from the index. It has no knowledge of IPC or UI.
+index, creates commits from the index, walks bounded commit history, and owns
+local/remote-tracking branch discovery plus local branch mutations. It has no
+knowledge of IPC or UI.
 
 ### `branchcraft-test-support`
 
@@ -127,9 +141,12 @@ and testable. The native dialog permission is explicitly limited to opening.
 - `features/commit` owns commit form state and validation.
 - `features/diff` owns diff loading, fallback states, responsive layout, and the
   Monaco adapter.
+- `features/history` owns bounded history loading and commit presentation.
+- `features/branches` owns branch search, creation, switching, safe-deletion
+  confirmation, and operation state.
 - Files under `services` are the only raw `invoke()` boundaries, including the
-  repository, diff, staging, and commit services.
-- `types/repository.ts` and `types/diff.ts` mirror the serde IPC contracts.
+  repository, diff, staging, commit, history, and branch services.
+- Files under `types` mirror the serde IPC contracts.
 - `components` contains presentation-only primitives, not domain behavior.
 
 There is no global state object. The selected repository and file currently
@@ -151,9 +168,14 @@ own state rather than expanding a universal store.
   mutations never invoke a shell or alter working-tree content while unstaging.
 - Commits use the effective repository Git configuration for author/committer
   identity. Branchcraft never invents or rewrites identity settings.
+- Branch checkout uses libgit2's safe checkout strategy and reports when local
+  work would be overwritten. Branchcraft exposes local branches only as
+  checkout targets in this milestone.
+- Branch deletion rejects the current branch and any branch not already merged
+  into the current `HEAD`; there is no forced-delete path.
 - Raw libgit2 errors are mapped to structured categories instead of being shown
   or logged verbatim.
-- No credential system is active in Milestones 0–3. When introduced, the auth
+- No credential system is active in Milestones 0–4. When introduced, the auth
   crate will receive only a `SecretStore` abstraction backed by Secret Service;
   access tokens will never enter frontend models or Git remote URLs.
 

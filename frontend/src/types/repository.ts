@@ -46,8 +46,13 @@ export type GitErrorKind =
   | "invalidPath"
   | "invalidInput"
   | "conflict"
+  | "dirtyWorkingTree"
   | "nothingStaged"
   | "missingIdentity"
+  | "invalidReference"
+  | "branchAlreadyExists"
+  | "branchNotFound"
+  | "unsafeOperation"
   | "unknown";
 
 export interface GitError {
