@@ -9,7 +9,7 @@ Ownership is intentionally split by directory:
 | --- | --- | --- |
 | Domain models | `crates/app-core` | Serializable, implementation-neutral types |
 | Authentication | `crates/auth` | OAuth/PKCE lifecycle and backend-only session access |
-| Persistence | `crates/storage` | OS credential store plus non-secret JSON settings |
+| Persistence | `crates/storage` | Secret Service/Windows Credential Manager plus non-secret JSON settings |
 | GitHub HTTP API | `crates/github` | GitHub-specific HTTP operations; no local Git behavior |
 | Git behavior | `crates/git` | `GitService`; no Tauri or React dependencies |
 | Desktop adapter | `src-tauri` | Thin commands and native plugins only |
@@ -27,4 +27,7 @@ and is exposed only to the exact GitHub HTTPS credential callback.
 Ordinary preferences are stored separately from credentials. Theme and recent
 repository metadata use the application configuration directory; OAuth tokens
 remain exclusively in the operating-system keyring.
+Tauri resolves config/log directories and native dialogs on Fedora and Windows;
+the domain crates contain no XDG, home-directory, drive-letter, or shell-command
+assumptions.
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { ColorPalette } from "../../types/settings";
 import type { SettingsState } from "./useSettings";
 
 interface SettingsPanelProps {
@@ -14,6 +15,17 @@ const shortcuts = [
   ["Show history", "Ctrl+2"],
   ["Open settings", "Ctrl+,"],
 ] as const;
+
+const palettes: ReadonlyArray<{
+  value: ColorPalette;
+  label: string;
+  description: string;
+}> = [
+  { value: "branchcraft", label: "Branchcraft", description: "Signature teal" },
+  { value: "ocean", label: "Ocean", description: "Clear blue" },
+  { value: "forest", label: "Forest", description: "Natural green" },
+  { value: "monochrome", label: "Monochrome", description: "Neutral gray" },
+];
 
 export function SettingsPanel({ state, onClose }: SettingsPanelProps) {
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -74,7 +86,7 @@ export function SettingsPanel({ state, onClose }: SettingsPanelProps) {
           <section aria-labelledby="appearance-heading">
             <div className="settings-section-heading">
               <h3 id="appearance-heading">Appearance</h3>
-              <span>Match your desktop or choose a fixed theme.</span>
+              <span>Choose a color scheme and palette.</span>
             </div>
             <fieldset className="theme-options" disabled={state.loading || state.busy}>
               <legend className="visually-hidden">Application theme</legend>
@@ -90,6 +102,38 @@ export function SettingsPanel({ state, onClose }: SettingsPanelProps) {
                   <span>{theme.charAt(0).toUpperCase() + theme.slice(1)}</span>
                 </label>
               ))}
+            </fieldset>
+            <fieldset className="palette-options" disabled={state.loading || state.busy}>
+              <legend>Color palette</legend>
+              <div>
+                {palettes.map((palette) => (
+                  <label key={palette.value}>
+                    <input
+                      aria-label={palette.label}
+                      checked={state.settings.palette === palette.value}
+                      name="palette"
+                      type="radio"
+                      value={palette.value}
+                      onChange={() => void state.setPalette(palette.value)}
+                    />
+                    <span className="palette-option">
+                      <span
+                        aria-hidden="true"
+                        className="palette-swatch"
+                        data-palette-preview={palette.value}
+                      >
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                      <span className="palette-copy">
+                        <strong>{palette.label}</strong>
+                        <small>{palette.description}</small>
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
             </fieldset>
           </section>
 

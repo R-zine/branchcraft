@@ -9,15 +9,15 @@ management, browser-based GitHub authentication, and asynchronous authenticated
 fetch/pull/push. It also browses the signed-in user's accessible GitHub
 repositories and clones either a selected repository or a validated HTTPS URL.
 It persists non-secret appearance and recent-repository settings, follows the
-desktop theme, exposes application shortcuts, and includes Linux release
-metadata and packaging workflows.
+desktop theme, exposes application shortcuts, and includes Fedora RPM and
+Windows NSIS release workflows.
 
 ## Dependency baseline
 
 | Technology | Selected baseline | Rationale |
 | --- | --- | --- |
-| Rust | Stable 1.98.1; edition 2024; project MSRV 1.85 | Stable development while retaining the lowest edition-2024/keyring-compatible baseline. |
-| Tauri | 2.11.6 (`tauri`), 2.11.1 JS API | Native Fedora/Wayland desktop shell through WebKitGTK. |
+| Rust | Stable; edition 2024; project MSRV 1.88 | Stable development while retaining the pinned keyring-compatible baseline. |
+| Tauri | 2.11.6 (`tauri`), 2.11.1 JS API | Shared shell using WebKitGTK on Fedora and WebView2 on Windows. |
 | Tauri dialog/opener | 2.7.3 / 2.5.5 | Official native directory picker and Rust-side system-browser launch. |
 | React | 19.3.0 | Stable client UI APIs. |
 | TypeScript | 6.0.3, strict mode | Newest stable line supported by the selected TypeScript ESLint parser. |
@@ -25,7 +25,7 @@ metadata and packaging workflows.
 | git2 | 0.21.0 | Safe Rust bindings to libgit2 behind `GitService`. |
 | Monaco Editor | 0.57.0 | Lazy-loaded, feature-isolated text diff renderer. |
 | reqwest | 0.13.5 with rustls | GitHub OAuth and REST client with bounded timeouts. |
-| keyring | 4.2.0 | Native credential-store abstraction; Linux uses Secret Service over zbus. |
+| keyring | 4.2.0 | Native credential-store abstraction; Fedora uses Secret Service over zbus and Windows uses Credential Manager. |
 | secrecy | 0.10.3 | Redacted secret wrappers for credentials and one-time OAuth values. |
 
 Primary references: [Rust releases](https://doc.rust-lang.org/releases.html),
@@ -57,6 +57,9 @@ React feature -> typed frontend service -> thin Tauri command
 The native dialog returns a path to React. Rust canonicalizes and validates it
 before opening the exact directory. Filesystem and libgit2 work runs on blocking
 workers. Only domain results or user-safe `GitError` values cross IPC.
+Repository roots remain opaque in TypeScript. The only frontend path splitting
+is a tested presentation helper for backend-normalized Git-relative status
+paths, whose separator is `/` by contract on every platform.
 
 Selected-file diff loading remains independent of repository state and Monaco:
 
@@ -182,15 +185,17 @@ Git or keyring responsibility.
 
 Owns both persistence contracts while keeping their data physically separate.
 `KeyringSecretStore` delegates opaque credentials to the native credential
-store; on Linux this is Secret Service/GNOME Keyring. `JsonSettingsStore`
-serializes bounded, non-secret preferences below Tauri's application-config
-directory with size checks, serialized updates, and safe corruption errors.
+store: Secret Service/GNOME Keyring on Fedora and Windows Credential Manager on
+Windows. `JsonSettingsStore` serializes bounded, non-secret preferences below
+Tauri's platform application-config directory with size checks, serialized
+updates, and safe corruption errors.
 
 ### `branchcraft-test-support`
 
-Builds real temporary Git repositories with deterministic local identities and
-provides an in-memory `SecretStore` for offline authentication tests. Tests do
-not require network access or user-level Git configuration.
+Builds real temporary Git repositories with deterministic local identities,
+provides an in-memory `SecretStore` for offline authentication tests, and owns
+the reusable secret-store contract suite. Tests do not require network access,
+user-level Git configuration, or a native credential-manager session.
 
 ### `branchcraft` (`src-tauri`)
 
@@ -200,7 +205,30 @@ objects for Git, authentication, GitHub HTTP, and settings. Commands obtain
 credentials only in the backend and move blocking Git/settings work off the
 async runtime. Browser launch happens from Rust, so no opener capability is
 granted to webview JavaScript; native permissions remain limited to opening a
-dialog and synchronizing the main window theme.
+dialog and synchronizing the main window theme. Tauri's path resolver selects
+the application config and log directories, keeping XDG and Windows directory
+rules out of domain code.
+
+## Platform boundary
+
+Most code is intentionally identical on Fedora and Windows:
+
+```text
+React -> Tauri commands -> AuthService / GitService / SettingsStore
+                              |              |             |
+                     SecretStore       libgit2       Path / PathBuf
+                              |
+                    keyring native backend
+                    /                    \
+          Secret Service          Credential Manager
+```
+
+Localized platform behavior is limited to the native keyring backend selected
+by `keyring`, Tauri's config/log directory resolution, WebKitGTK versus
+WebView2, normal filesystem case behavior in settings de-duplication, and the
+platform packaging target. Fedora `.desktop`, AppStream, RPM, and Flatpak
+assets remain Linux-specific; ICO and NSIS metadata remain Windows-specific.
+Runtime features never invoke a shell or external Git executable.
 
 ## Frontend ownership
 

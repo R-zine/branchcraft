@@ -371,6 +371,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
+ "tempfile",
  "url",
 ]
 
@@ -452,6 +453,7 @@ dependencies = [
  "git2",
  "secrecy",
  "tempfile",
+ "tokio",
 ]
 
 [[package]]

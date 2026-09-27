@@ -222,6 +222,7 @@ export function App({
             service={diffService}
             repositoryRevision={state.revision}
             theme={settings.resolvedTheme}
+            palette={settings.settings.palette}
           />
         </main>
       )}

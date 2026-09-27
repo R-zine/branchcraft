@@ -3,9 +3,11 @@
 ## User outcome
 
 Branchcraft follows the operating-system light/dark preference by default. The
-Settings dialog can pin light or dark mode, manages recent repositories, shows
-the supported keyboard shortcuts, and contains the application About details.
-CSS, Monaco, and the native Tauri window decoration use the same resolved theme.
+Settings dialog can pin light or dark mode and choose between the Branchcraft,
+Ocean, Forest, and Monochrome color palettes. It also manages recent
+repositories, shows the supported keyboard shortcuts, and contains the
+application About details. CSS and Monaco use the same palette and resolved
+theme, while the native Tauri window decoration follows the resolved theme.
 
 Successful repository opens and clones move that repository to the front of a
 bounded 12-entry recent list. Availability is checked when settings load. A
@@ -33,15 +35,16 @@ is open, background shortcuts are suppressed.
 - `crates/storage::JsonSettingsStore` owns bounded JSON persistence,
   availability checks, serialized mutations, and corruption recovery.
 - `src-tauri/src/commands/settings.rs` moves file access to blocking workers.
-- `frontend/src/features/settings` owns theme resolution, the settings dialog,
-  shortcuts, recents management, and behavior tests.
+- `frontend/src/features/settings` owns theme resolution, palette application,
+  the settings dialog, shortcuts, recents management, and behavior tests.
 - `frontend/src/services/settingsService.ts` is the only raw Tauri boundary and
   synchronizes the native window theme.
 
-The JSON settings file is ordinary application data and contains only theme and
-recent-repository metadata. OAuth sessions remain separately protected by the
-operating-system keyring. A settings-write failure never causes a successful Git
-open or clone to fail.
+The JSON settings file is ordinary application data and contains only theme,
+palette, and recent-repository metadata. Older settings files without a palette
+continue with the default Branchcraft palette. OAuth sessions remain separately
+protected by the operating-system keyring. A settings-write failure never
+causes a successful Git open or clone to fail.
 
 References:
 

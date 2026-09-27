@@ -10,6 +10,7 @@ import type { SettingsService } from "../../services/settingsService";
 import {
   isSettingsError,
   type ApplicationSettings,
+  type ColorPalette,
   type ResolvedTheme,
   type SettingsError,
   type ThemePreference,
@@ -17,6 +18,7 @@ import {
 
 const defaults: ApplicationSettings = {
   theme: "system",
+  palette: "branchcraft",
   recentRepositories: [],
 };
 
@@ -43,6 +45,7 @@ export interface SettingsState {
   busy: boolean;
   error: SettingsError | null;
   setTheme: (theme: ThemePreference) => Promise<void>;
+  setPalette: (palette: ColorPalette) => Promise<void>;
   removeRecentRepository: (path: string) => Promise<void>;
   clearRecentRepositories: () => Promise<void>;
   reset: () => Promise<void>;
@@ -97,8 +100,9 @@ export function useSettings(service: SettingsService): SettingsState {
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.dataset.palette = settings.palette;
     document.documentElement.style.colorScheme = resolvedTheme;
-  }, [resolvedTheme]);
+  }, [resolvedTheme, settings.palette]);
 
   useEffect(() => {
     void service.applyWindowTheme(settings.theme).catch(() => undefined);
@@ -131,6 +135,7 @@ export function useSettings(service: SettingsService): SettingsState {
     busy,
     error,
     setTheme: (theme) => update(() => service.setTheme(theme)),
+    setPalette: (palette) => update(() => service.setPalette(palette)),
     removeRecentRepository: (path) =>
       update(() => service.removeRecentRepository(path)),
     clearRecentRepositories: () => update(() => service.clearRecentRepositories()),

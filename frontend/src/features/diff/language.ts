@@ -1,3 +1,5 @@
+import { gitFilename } from "../../utils/gitPath";
+
 const filenameLanguages: Record<string, string> = {
   Dockerfile: "dockerfile",
   Makefile: "shell",
@@ -38,7 +40,7 @@ const extensionLanguages: Record<string, string> = {
 };
 
 export function languageForPath(path: string): string {
-  const filename = path.split("/").at(-1) ?? path;
+  const filename = gitFilename(path);
   const exact = filenameLanguages[filename];
   if (exact !== undefined) {
     return exact;

@@ -28,7 +28,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["rpm", "deb"],
+    "targets": "all",
     "publisher": "Branchcraft contributors",
     "copyright": "Copyright © 2026 Branchcraft contributors",
     "license": "MIT",
@@ -41,8 +41,8 @@
       "icons/icon.ico"
     ],
     "category": "DeveloperTool",
-    "shortDescription": "A fast, focused desktop Git client for Linux",
-    "longDescription": "Branchcraft is a fast, focused desktop Git client for Linux, built with Rust and Tauri.",
+    "shortDescription": "A fast, focused desktop Git client",
+    "longDescription": "Branchcraft is a fast, focused desktop Git client for Linux and Windows, built with Rust and Tauri.",
     "linux": {
       "appimage": {
         "bundleMediaFramework": false
@@ -52,6 +52,13 @@
         "files": {
           "../packaging/io.github.username.Branchcraft.metainfo.xml": "/usr/share/metainfo/io.github.username.Branchcraft.metainfo.xml"
         }
+      }
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico"
       }
     }
   }

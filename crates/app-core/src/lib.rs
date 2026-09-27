@@ -329,6 +329,18 @@ pub enum ThemePreference {
     Dark,
 }
 
+/// User-selected application color palette. Palettes are independent from the
+/// light/dark theme so each palette can follow the selected color scheme.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ColorPalette {
+    #[default]
+    Branchcraft,
+    Ocean,
+    Forest,
+    Monochrome,
+}
+
 /// A previously opened repository stored in ordinary application settings.
 /// Availability is refreshed from disk whenever settings are loaded.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -344,6 +356,7 @@ pub struct RecentRepository {
 #[serde(rename_all = "camelCase")]
 pub struct ApplicationSettings {
     pub theme: ThemePreference,
+    pub palette: ColorPalette,
     pub recent_repositories: Vec<RecentRepository>,
 }
 

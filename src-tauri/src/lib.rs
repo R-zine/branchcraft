@@ -108,6 +108,7 @@ pub fn run() {
             commands::repositories::refresh_repository,
             commands::settings::get_settings,
             commands::settings::set_theme,
+            commands::settings::set_palette,
             commands::settings::remove_recent_repository,
             commands::settings::clear_recent_repositories,
             commands::settings::reset_settings,

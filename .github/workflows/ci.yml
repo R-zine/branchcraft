@@ -5,12 +5,21 @@ on:
   pull_request:
 
 jobs:
-  rust:
-    name: Rust
-    runs-on: ubuntu-24.04
+  checks:
+    name: Checks (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-24.04
+          - name: Windows
+            os: windows-2025
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - name: Install Tauri system dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libssl-dev libxdo-dev
@@ -21,25 +30,21 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
       - run: cargo test --workspace
-
-  frontend:
-    name: Frontend
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+        working-directory: frontend
       - run: npm run typecheck
+        working-directory: frontend
       - run: npm run lint
+        working-directory: frontend
       - run: npm test
+        working-directory: frontend
       - run: npm run build
+        working-directory: frontend
 
   fedora-build:
     name: Fedora desktop build
@@ -75,5 +80,31 @@ jobs:
         with:
           name: branchcraft-rpm
           path: target/release/bundle/rpm/*.rpm
+          if-no-files-found: error
+
+  windows-build:
+    name: Windows desktop build
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version '^2.11' --locked
+      - name: Build Branchcraft NSIS installer
+        run: cargo tauri build --config src-tauri/tauri.conf.json --bundles nsis
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: branchcraft-windows-x64-installer
+          path: target/release/bundle/nsis/*-setup.exe
           if-no-files-found: error
 

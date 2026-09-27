@@ -334,7 +334,8 @@ mod tests {
 
     #[test]
     fn clones_a_local_repository_with_progress() {
-        let source = TestRepository::with_initial_commit();
+        let source =
+            TestRepository::with_initial_commit_and_prefix("clone source with spaces Гілка-");
         let parent = clone_parent();
         let mut events = Vec::new();
 

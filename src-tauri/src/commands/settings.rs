@@ -1,6 +1,6 @@
 use super::settings_task_error;
 use crate::AppState;
-use branchcraft_app_core::{ApplicationSettings, SettingsError, ThemePreference};
+use branchcraft_app_core::{ApplicationSettings, ColorPalette, SettingsError, ThemePreference};
 use serde::Deserialize;
 use std::{path::PathBuf, sync::Arc};
 use tauri::State;
@@ -9,6 +9,12 @@ use tauri::State;
 #[serde(rename_all = "camelCase")]
 pub struct SetThemeRequest {
     theme: ThemePreference,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetPaletteRequest {
+    palette: ColorPalette,
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,6 +40,17 @@ pub async fn set_theme(
 ) -> Result<ApplicationSettings, SettingsError> {
     let settings = Arc::clone(&state.settings);
     tauri::async_runtime::spawn_blocking(move || settings.set_theme(request.theme))
+        .await
+        .map_err(|_| settings_task_error())?
+}
+
+#[tauri::command]
+pub async fn set_palette(
+    request: SetPaletteRequest,
+    state: State<'_, AppState>,
+) -> Result<ApplicationSettings, SettingsError> {
+    let settings = Arc::clone(&state.settings);
+    tauri::async_runtime::spawn_blocking(move || settings.set_palette(request.palette))
         .await
         .map_err(|_| settings_task_error())?
 }

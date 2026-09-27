@@ -1,5 +1,6 @@
 import { Icon } from "../../components/Icon";
 import type { FileStatus, GitError } from "../../types/repository";
+import { presentGitPath } from "../../utils/gitPath";
 import { statusCode, statusLabel, statusTone } from "./statusPresentation";
 
 interface ChangesPanelProps {
@@ -91,6 +92,7 @@ export function ChangesPanel({
         <ul className="file-list">
           {files.map((file) => {
             const shouldStage = file.unstaged !== null || file.conflicted;
+            const path = presentGitPath(file.path);
             const stageState =
               file.staged !== null && file.unstaged === null && !file.conflicted
                 ? "true"
@@ -133,12 +135,8 @@ export function ChangesPanel({
                   </span>
                   <Icon name="file" />
                   <span className="file-copy">
-                    <strong>{file.path.split("/").at(-1)}</strong>
-                    <span>
-                      {file.path.includes("/")
-                        ? file.path.slice(0, file.path.lastIndexOf("/"))
-                        : "."}
-                    </span>
+                    <strong>{path.filename}</strong>
+                    <span>{path.parent}</span>
                   </span>
                   <span className="visually-hidden">{statusLabel(file)}</span>
                 </button>

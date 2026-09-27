@@ -1,5 +1,6 @@
 export type ThemePreference = "system" | "light" | "dark";
 export type ResolvedTheme = "light" | "dark";
+export type ColorPalette = "branchcraft" | "ocean" | "forest" | "monochrome";
 
 export interface RecentRepository {
   name: string;
@@ -9,6 +10,7 @@ export interface RecentRepository {
 
 export interface ApplicationSettings {
   theme: ThemePreference;
+  palette: ColorPalette;
   recentRepositories: RecentRepository[];
 }
 

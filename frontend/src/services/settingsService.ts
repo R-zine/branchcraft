@@ -2,12 +2,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type {
   ApplicationSettings,
+  ColorPalette,
   ThemePreference,
 } from "../types/settings";
 
 export interface SettingsService {
   getSettings(): Promise<ApplicationSettings>;
   setTheme(theme: ThemePreference): Promise<ApplicationSettings>;
+  setPalette(palette: ColorPalette): Promise<ApplicationSettings>;
   removeRecentRepository(path: string): Promise<ApplicationSettings>;
   clearRecentRepositories(): Promise<ApplicationSettings>;
   resetSettings(): Promise<ApplicationSettings>;
@@ -22,6 +24,12 @@ export const tauriSettingsService: SettingsService = {
   setTheme(theme) {
     return invoke<ApplicationSettings>("set_theme", {
       request: { theme },
+    });
+  },
+
+  setPalette(palette) {
+    return invoke<ApplicationSettings>("set_palette", {
+      request: { palette },
     });
   },
 

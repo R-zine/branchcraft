@@ -75,12 +75,24 @@ pub(super) fn file_diff(repository_path: &Path, file_path: &str) -> Result<Diff,
     let new_bytes = new.bytes.unwrap_or_default();
     let old_content = String::from_utf8(old_bytes).map_err(|_| invalid_text_error())?;
     let new_content = String::from_utf8(new_bytes).map_err(|_| invalid_text_error())?;
-    let hunks = build_hunks(
-        old_content.as_bytes(),
-        &old_relative_path,
-        new_content.as_bytes(),
-        &relative_path,
-    )?;
+    let hunks = if matches!(kind, DiffFileKind::Renamed | DiffFileKind::Conflicted) {
+        build_buffer_hunks(
+            old_content.as_bytes(),
+            &old_relative_path,
+            new_content.as_bytes(),
+            &relative_path,
+        )?
+    } else {
+        match build_repository_hunks(&repository, file_path)? {
+            Some(hunks) => hunks,
+            None => build_buffer_hunks(
+                old_content.as_bytes(),
+                &old_relative_path,
+                new_content.as_bytes(),
+                &relative_path,
+            )?,
+        }
+    };
 
     Ok(Diff {
         file: DiffFile {
@@ -284,7 +296,38 @@ fn diff_kind(status: &FileStatus) -> DiffFileKind {
     }
 }
 
-fn build_hunks(
+fn build_repository_hunks(
+    repository: &Repository,
+    relative_path: &str,
+) -> Result<Option<Vec<DiffHunk>>, GitError> {
+    let head_tree = match repository.head() {
+        Ok(head) => Some(
+            head.peel_to_tree()
+                .map_err(|error| map_diff_git_error(&error))?,
+        ),
+        Err(error) if error.code() == ErrorCode::UnbornBranch => None,
+        Err(error) => return Err(map_diff_git_error(&error)),
+    };
+    let mut options = DiffOptions::new();
+    options
+        .pathspec(relative_path)
+        .include_untracked(true)
+        .recurse_untracked_dirs(true)
+        .show_untracked_content(true)
+        .context_lines(3)
+        .interhunk_lines(0)
+        .minimal(true);
+    let diff = repository
+        .diff_tree_to_workdir_with_index(head_tree.as_ref(), Some(&mut options))
+        .map_err(|error| map_diff_git_error(&error))?;
+    let Some(patch) = Patch::from_diff(&diff, 0).map_err(|error| map_diff_git_error(&error))?
+    else {
+        return Ok(None);
+    };
+    parse_patch_hunks(&patch).map(Some)
+}
+
+fn build_buffer_hunks(
     old: &[u8],
     old_path: &Path,
     new: &[u8],
@@ -294,6 +337,10 @@ fn build_hunks(
     options.context_lines(3).interhunk_lines(0).minimal(true);
     let patch = Patch::from_buffers(old, Some(old_path), new, Some(new_path), Some(&mut options))
         .map_err(|error| map_diff_git_error(&error))?;
+    parse_patch_hunks(&patch)
+}
+
+fn parse_patch_hunks(patch: &Patch<'_>) -> Result<Vec<DiffHunk>, GitError> {
     let mut hunks = Vec::with_capacity(patch.num_hunks());
 
     for hunk_index in 0..patch.num_hunks() {
@@ -493,5 +540,74 @@ mod tests {
             .expect_err("path traversal must fail");
 
         assert_eq!(error.kind, branchcraft_app_core::GitErrorKind::InvalidPath);
+    }
+
+    #[test]
+    fn preserves_crlf_content_and_diffs_only_the_changed_line() {
+        let repository = TestRepository::empty();
+        repository.write("line-endings.txt", "first\r\nsecond\r\nthird\r\n");
+        repository.stage_all();
+        repository.commit("CRLF baseline");
+        repository.write("line-endings.txt", "first\r\nchanged\r\nthird\r\n");
+
+        let diff = LibGitService::new()
+            .diff(repository.path(), "line-endings.txt")
+            .expect("CRLF diff");
+
+        assert_eq!(
+            diff.file.old_content.as_deref(),
+            Some("first\r\nsecond\r\nthird\r\n")
+        );
+        assert_eq!(
+            diff.file.new_content.as_deref(),
+            Some("first\r\nchanged\r\nthird\r\n")
+        );
+        let changed = diff
+            .hunks
+            .iter()
+            .flat_map(|hunk| &hunk.lines)
+            .filter(|line| matches!(line.kind, DiffLineKind::Added | DiffLineKind::Deleted))
+            .count();
+        assert_eq!(changed, 2);
+    }
+
+    #[test]
+    fn respects_git_attributes_for_mixed_worktree_line_endings() {
+        let repository = TestRepository::empty();
+        repository.write(".gitattributes", "*.txt text eol=crlf\n");
+        repository.write("line-endings.txt", "first\r\nsecond\r\nthird\r\n");
+        repository.stage_all();
+        repository.commit("LF baseline");
+
+        repository.write("line-endings.txt", "first\r\nsecond\r\nthird\r\n");
+        let clean = LibGitService::new()
+            .repository_status(repository.path())
+            .expect("attribute-normalized status");
+        assert!(
+            clean.files.is_empty(),
+            "unexpected status: {:?}",
+            clean.files
+        );
+
+        repository.write("line-endings.txt", "first\r\nchanged\r\nthird\r\n");
+        let diff = LibGitService::new()
+            .diff(repository.path(), "line-endings.txt")
+            .expect("mixed line-ending diff");
+        assert_eq!(diff.file.preview_status, DiffPreviewStatus::Ready);
+        assert_eq!(
+            diff.file.old_content.as_deref(),
+            Some("first\nsecond\nthird\n")
+        );
+        assert_eq!(
+            diff.file.new_content.as_deref(),
+            Some("first\r\nchanged\r\nthird\r\n")
+        );
+        let changed = diff
+            .hunks
+            .iter()
+            .flat_map(|hunk| &hunk.lines)
+            .filter(|line| matches!(line.kind, DiffLineKind::Added | DiffLineKind::Deleted))
+            .count();
+        assert_eq!(changed, 2);
     }
 }

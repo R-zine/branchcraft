@@ -2,7 +2,8 @@
 
 use async_trait::async_trait;
 use branchcraft_app_core::{
-    ApplicationSettings, RecentRepository, SettingsError, SettingsErrorKind, ThemePreference,
+    ApplicationSettings, ColorPalette, RecentRepository, SettingsError, SettingsErrorKind,
+    ThemePreference,
 };
 use keyring::{Entry, Error as KeyringError};
 use secrecy::{ExposeSecret, SecretString};
@@ -57,8 +58,8 @@ pub trait SecretStore: Send + Sync {
     async fn delete(&self, key: &str) -> Result<(), StorageError>;
 }
 
-/// Secret Service / native credential-store implementation provided by
-/// `keyring`. On Fedora this uses the zbus Secret Service backend.
+/// Native credential-store implementation provided by `keyring`. Fedora uses
+/// Secret Service over zbus; Windows uses Windows Credential Manager.
 #[derive(Debug, Clone)]
 pub struct KeyringSecretStore {
     service: String,
@@ -147,6 +148,13 @@ pub trait SettingsStore: Send + Sync {
     /// Returns a safe structured error when persistence fails.
     fn set_theme(&self, theme: ThemePreference) -> Result<ApplicationSettings, SettingsError>;
 
+    /// Saves the selected color palette.
+    ///
+    /// # Errors
+    ///
+    /// Returns a safe structured error when persistence fails.
+    fn set_palette(&self, palette: ColorPalette) -> Result<ApplicationSettings, SettingsError>;
+
     /// Moves a repository to the front of the bounded recent list.
     ///
     /// # Errors
@@ -221,6 +229,10 @@ impl SettingsStore for JsonSettingsStore {
         self.update(|settings| settings.theme = theme)
     }
 
+    fn set_palette(&self, palette: ColorPalette) -> Result<ApplicationSettings, SettingsError> {
+        self.update(|settings| settings.palette = palette)
+    }
+
     fn record_recent_repository(
         &self,
         name: &str,
@@ -263,6 +275,7 @@ impl SettingsStore for JsonSettingsStore {
 #[serde(default, rename_all = "camelCase")]
 struct StoredSettings {
     theme: ThemePreference,
+    palette: ColorPalette,
     recent_repositories: Vec<StoredRecentRepository>,
 }
 
@@ -312,6 +325,7 @@ fn normalize(settings: &mut StoredSettings) {
 fn public_settings(settings: StoredSettings) -> ApplicationSettings {
     ApplicationSettings {
         theme: settings.theme,
+        palette: settings.palette,
         recent_repositories: settings
             .recent_repositories
             .into_iter()
@@ -400,8 +414,10 @@ fn unknown_settings_error() -> SettingsError {
 #[cfg(test)]
 mod settings_tests {
     use super::{JsonSettingsStore, MAX_RECENT_REPOSITORIES, SettingsStore};
-    use branchcraft_app_core::{SettingsErrorKind, ThemePreference};
+    use branchcraft_app_core::{ColorPalette, SettingsErrorKind, ThemePreference};
     use std::fs;
+    #[cfg(windows)]
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     fn store(root: &TempDir) -> JsonSettingsStore {
@@ -416,8 +432,15 @@ mod settings_tests {
             store.load().expect("default settings").theme,
             ThemePreference::System
         );
+        assert_eq!(
+            store.load().expect("default settings").palette,
+            ColorPalette::Branchcraft
+        );
 
         store.set_theme(ThemePreference::Light).expect("save theme");
+        store
+            .set_palette(ColorPalette::Ocean)
+            .expect("save palette");
         for index in 0..MAX_RECENT_REPOSITORIES + 2 {
             let path = root.path().join(format!("repository-{index}"));
             fs::create_dir(&path).expect("repository directory");
@@ -428,6 +451,7 @@ mod settings_tests {
 
         let settings = store.load().expect("stored settings");
         assert_eq!(settings.theme, ThemePreference::Light);
+        assert_eq!(settings.palette, ColorPalette::Ocean);
         assert_eq!(settings.recent_repositories.len(), MAX_RECENT_REPOSITORIES);
         assert_eq!(
             settings.recent_repositories[0].name,
@@ -485,10 +509,25 @@ mod settings_tests {
         );
 
         store.set_theme(ThemePreference::Dark).expect("dark theme");
-        assert_eq!(
-            store.reset().expect("reset settings").theme,
-            ThemePreference::System
-        );
+        store
+            .set_palette(ColorPalette::Monochrome)
+            .expect("monochrome palette");
+        let settings = store.reset().expect("reset settings");
+        assert_eq!(settings.theme, ThemePreference::System);
+        assert_eq!(settings.palette, ColorPalette::Branchcraft);
+    }
+
+    #[test]
+    fn loads_legacy_settings_without_a_palette() {
+        let root = TempDir::new().expect("settings root");
+        let store = store(&root);
+        let path = root.path().join("config").join("settings.json");
+        fs::create_dir_all(path.parent().expect("settings parent")).expect("settings parent");
+        fs::write(&path, br#"{"theme":"dark","recentRepositories":[]}"#).expect("legacy settings");
+
+        let settings = store.load().expect("load legacy settings");
+        assert_eq!(settings.theme, ThemePreference::Dark);
+        assert_eq!(settings.palette, ColorPalette::Branchcraft);
     }
 
     #[test]
@@ -506,5 +545,47 @@ mod settings_tests {
             store.reset().expect("reset corrupt settings").theme,
             ThemePreference::System
         );
+    }
+
+    #[test]
+    fn persists_paths_with_spaces_unicode_and_deep_nesting() {
+        let root = TempDir::new().expect("settings root");
+        let store = store(&root);
+        let path = root
+            .path()
+            .join("Projects with spaces")
+            .join("Гілка")
+            .join("nested")
+            .join("repository-name_1.2!");
+        fs::create_dir_all(&path).expect("repository directory");
+
+        store
+            .record_recent_repository("Гілка змін", &path)
+            .expect("record portable path");
+
+        let settings = store.load().expect("load portable path");
+        assert_eq!(settings.recent_repositories.len(), 1);
+        assert_eq!(settings.recent_repositories[0].path, path);
+        assert!(settings.recent_repositories[0].available);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn deduplicates_normally_case_insensitive_windows_paths() {
+        let root = TempDir::new().expect("settings root");
+        let store = store(&root);
+        let path = root.path().join("MixedCaseRepository");
+        let alternate_case = PathBuf::from(path.to_string_lossy().to_ascii_uppercase());
+
+        store
+            .record_recent_repository("first", &path)
+            .expect("first recent");
+        store
+            .record_recent_repository("replacement", &alternate_case)
+            .expect("replacement recent");
+
+        let settings = store.load().expect("stored settings");
+        assert_eq!(settings.recent_repositories.len(), 1);
+        assert_eq!(settings.recent_repositories[0].name, "replacement");
     }
 }

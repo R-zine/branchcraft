@@ -497,7 +497,7 @@ fn status_path(entry: &git2::StatusEntry<'_>) -> Option<String> {
                 .and_then(|delta| delta.new_file().path())
         })
         .or_else(|| entry.path().ok().map(Path::new))
-        .map(|path| path.to_string_lossy().replace('\\', "/"))
+        .map(git_path_for_ipc)
 }
 
 fn previous_path(entry: &git2::StatusEntry<'_>, status: Status) -> Option<String> {
@@ -512,7 +512,19 @@ fn previous_path(entry: &git2::StatusEntry<'_>, status: Status) -> Option<String
     } else {
         None
     };
-    old_path.map(|path| path.to_string_lossy().replace('\\', "/"))
+    old_path.map(git_path_for_ipc)
+}
+
+fn git_path_for_ipc(path: &Path) -> String {
+    #[cfg(windows)]
+    {
+        path.to_string_lossy().replace('\\', "/")
+    }
+
+    #[cfg(not(windows))]
+    {
+        path.to_string_lossy().into_owned()
+    }
 }
 
 const fn staged_kind(status: Status) -> Option<ChangeKind> {
@@ -728,5 +740,44 @@ mod tests {
         assert!(snapshot.branch.detached);
         assert!(!snapshot.branch.unborn);
         assert_eq!(snapshot.branch.display_name.len(), 8);
+    }
+
+    #[test]
+    fn handles_portable_repository_and_file_paths() {
+        let repository = TestRepository::with_initial_commit_and_prefix("Branchcraft space Гілка-");
+        let relative_path = concat!(
+            "Mixed Case/level-01/level-02/level-03/level-04/level-05/",
+            "level-06/level-07/résumé + [draft]!.txt"
+        );
+        repository.write(relative_path, "portable path\n");
+
+        let service = LibGitService::new();
+        let snapshot = service
+            .open_repository(repository.path())
+            .expect("open portable repository path");
+        assert_eq!(snapshot.path, repository.path().canonicalize().unwrap());
+        #[cfg(windows)]
+        assert!(matches!(
+            snapshot.path.components().next(),
+            Some(std::path::Component::Prefix(_))
+        ));
+        let file = snapshot
+            .files
+            .iter()
+            .find(|file| file.path == relative_path)
+            .expect("portable status path");
+        assert_eq!(file.unstaged, Some(ChangeKind::Untracked));
+
+        let staged = service
+            .stage_file(repository.path(), relative_path)
+            .expect("stage portable path");
+        assert_eq!(
+            staged
+                .files
+                .iter()
+                .find(|file| file.path == relative_path)
+                .and_then(|file| file.staged),
+            Some(ChangeKind::Added)
+        );
     }
 }

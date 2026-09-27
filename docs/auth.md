@@ -25,6 +25,14 @@ export BRANCHCRAFT_GITHUB_CLIENT_SECRET=your_client_secret
 cargo tauri build --config src-tauri/tauri.conf.json --bundles rpm
 ```
 
+The equivalent Windows Developer PowerShell commands are:
+
+```powershell
+$env:BRANCHCRAFT_GITHUB_CLIENT_ID = "your_client_id"
+$env:BRANCHCRAFT_GITHUB_CLIENT_SECRET = "your_client_secret"
+cargo tauri build --config src-tauri/tauri.conf.json --bundles nsis
+```
+
 The same variables can be supplied at runtime for local development. Runtime
 values take precedence over values embedded by `option_env!`. A build without
 both values remains fully usable for local Git work and reports GitHub sign-in
@@ -70,7 +78,9 @@ AccountMenu
     -> validate callback state and exchange code with PKCE
     -> GitHub REST GET /user
     -> SecretStore
-    -> Linux Secret Service / GNOME Keyring
+    -> native SecretStore
+       -> Fedora Secret Service / GNOME Keyring
+       -> Windows Credential Manager
 ```
 
 The callback page has a restrictive content security policy, contains no
@@ -96,9 +106,15 @@ sources are cloned anonymously.
 
 The complete OAuth token set is serialized only in memory and passed to the
 `SecretStore` abstraction as a `SecretString`. Production uses `keyring` 4.2;
-on Fedora/Linux its native backend talks to Secret Service over zbus. Tokens
-are never written to application configuration, Git configuration, SQLite,
-frontend storage, remote URLs, process arguments, or logs.
+its native backend talks to Secret Service over zbus on Fedora and Windows
+Credential Manager on Windows. Tokens are never written to application
+configuration, Git configuration, SQLite, frontend storage, remote URLs,
+process arguments, or logs.
+
+Ordinary CI runs the reusable `SecretStore` contract against an in-memory fake
+and tests OAuth with fake browser/GitHub adapters. A real desktop keyring can
+require an unlocked interactive session, so persistence and logout are covered
+by the Fedora and Windows release smoke tests instead of weakening headless CI.
 
 For fetch, pull, and push, the desktop command requests an access token only
 after the Git backend classifies the active remote as credential-free GitHub

@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use branchcraft_storage::{SecretStore, StorageError};
 use git2::{IndexAddOption, Repository, Signature};
-use secrecy::SecretString;
+use secrecy::{ExposeSecret, SecretString};
 use std::{collections::HashMap, fs, path::Path, sync::Mutex};
 use tempfile::TempDir;
 
@@ -56,6 +56,55 @@ impl SecretStore for MemorySecretStore {
     }
 }
 
+/// Verifies the behavior every `SecretStore` implementation must provide.
+/// Native adapters can reuse this in an interactive platform test; ordinary CI
+/// runs it against `MemorySecretStore` and never opens the user's keyring.
+///
+/// # Panics
+///
+/// Panics when the supplied store violates the contract.
+pub async fn assert_secret_store_contract(store: &dyn SecretStore) {
+    const KEY: &str = "contract-credential";
+
+    store.delete(KEY).await.expect("delete missing credential");
+    assert!(
+        store
+            .get(KEY)
+            .await
+            .expect("read missing credential")
+            .is_none()
+    );
+
+    store
+        .set(KEY, &SecretString::from("first-secret"))
+        .await
+        .expect("store credential");
+    let first = store
+        .get(KEY)
+        .await
+        .expect("read credential")
+        .expect("stored credential");
+    assert_eq!(first.expose_secret(), "first-secret");
+
+    store
+        .set(KEY, &SecretString::from("replacement-secret"))
+        .await
+        .expect("replace credential");
+    let replacement = store
+        .get(KEY)
+        .await
+        .expect("read replacement")
+        .expect("replacement credential");
+    assert_eq!(replacement.expose_secret(), "replacement-secret");
+
+    store.delete(KEY).await.expect("delete credential");
+    assert!(store.get(KEY).await.expect("read after delete").is_none());
+    store
+        .delete(KEY)
+        .await
+        .expect("delete missing credential again");
+}
+
 pub struct TestRepository {
     directory: TempDir,
 }
@@ -68,27 +117,64 @@ impl TestRepository {
     /// Panics when its isolated directory or Git repository cannot be created.
     #[must_use]
     pub fn empty() -> Self {
+        Self::empty_with_prefix("repository-")
+    }
+
+    /// Creates an empty repository whose temporary directory has a portable
+    /// caller-provided prefix. This is used to exercise spaces and Unicode in
+    /// repository roots without hardcoding an operating-system path.
+    ///
+    /// # Panics
+    ///
+    /// Panics when its isolated directory or Git repository cannot be created.
+    #[must_use]
+    pub fn empty_with_prefix(prefix: &str) -> Self {
         let temporary_root = std::env::current_dir()
             .expect("resolve current directory")
             .join("target")
             .join("branchcraft-test-repositories");
         fs::create_dir_all(&temporary_root).expect("create fixture root directory");
         let directory = tempfile::Builder::new()
-            .prefix("repository-")
+            .prefix(prefix)
             .tempdir_in(temporary_root)
             .expect("create temporary repository directory");
-        Repository::init(directory.path()).expect("initialize temporary repository");
+        let repository =
+            Repository::init(directory.path()).expect("initialize temporary repository");
+        repository
+            .config()
+            .expect("open fixture config")
+            .set_bool("core.autocrlf", false)
+            .expect("isolate fixture line-ending config");
         Self { directory }
     }
 
     #[must_use]
     pub fn with_initial_commit() -> Self {
-        let fixture = Self::empty();
+        Self::with_initial_commit_and_prefix("repository-")
+    }
+
+    #[must_use]
+    pub fn with_initial_commit_and_prefix(prefix: &str) -> Self {
+        let fixture = Self::empty_with_prefix(prefix);
         fixture.write("README.md", "# Fixture\n");
         fixture.write("delete-me.txt", "remove me\n");
         fixture.stage_all();
         fixture.commit("Initial commit");
         fixture
+    }
+
+    /// Sets one repository-local Git configuration value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the repository configuration cannot be updated.
+    pub fn set_config(&self, name: &str, value: &str) {
+        let repository = Repository::open(self.path()).expect("open fixture repository");
+        repository
+            .config()
+            .expect("open fixture config")
+            .set_str(name, value)
+            .expect("set fixture config");
     }
 
     #[must_use]
@@ -304,5 +390,15 @@ impl TestRepository {
                 &parent_refs,
             )
             .expect("create fixture commit");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MemorySecretStore, assert_secret_store_contract};
+
+    #[tokio::test]
+    async fn memory_store_satisfies_secret_store_contract() {
+        assert_secret_store_contract(&MemorySecretStore::default()).await;
     }
 }

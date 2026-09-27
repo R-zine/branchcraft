@@ -63,15 +63,20 @@ function settingsService(
 ) {
   const getSettings = vi.fn<SettingsService["getSettings"]>().mockResolvedValue({
     theme: "system",
+    palette: "branchcraft",
     recentRepositories,
   });
   const setTheme = vi.fn<SettingsService["setTheme"]>().mockImplementation((theme) =>
-    Promise.resolve({ theme, recentRepositories }),
+    Promise.resolve({ theme, palette: "branchcraft", recentRepositories }),
+  );
+  const setPalette = vi.fn<SettingsService["setPalette"]>().mockImplementation((palette) =>
+    Promise.resolve({ theme: "system", palette, recentRepositories }),
   );
   return {
     service: {
       getSettings,
       setTheme,
+      setPalette,
       removeRecentRepository: vi.fn(),
       clearRecentRepositories: vi.fn(),
       resetSettings: vi.fn(),
@@ -79,6 +84,7 @@ function settingsService(
     } satisfies SettingsService,
     getSettings,
     setTheme,
+    setPalette,
   };
 }
 
@@ -206,7 +212,7 @@ describe("Branchcraft app", () => {
     );
   });
 
-  it("opens settings from the keyboard and persists a fixed theme", async () => {
+  it("opens settings from the keyboard and persists appearance choices", async () => {
     const { repositoryService } = service();
     const settings = settingsService();
     render(
@@ -224,6 +230,12 @@ describe("Branchcraft app", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Light" }));
     await waitFor(() => expect(settings.setTheme).toHaveBeenCalledWith("light"));
     expect(document.documentElement.dataset.theme).toBe("light");
+
+    fireEvent.click(screen.getByRole("radio", { name: "Monochrome" }));
+    await waitFor(() =>
+      expect(settings.setPalette).toHaveBeenCalledWith("monochrome"),
+    );
+    expect(document.documentElement.dataset.palette).toBe("monochrome");
 
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "Settings" })).toBeNull();

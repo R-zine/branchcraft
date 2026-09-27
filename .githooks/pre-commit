@@ -1,0 +1,58 @@
+#!/bin/sh
+
+# Keep local commits aligned with the platform-neutral checks in CI.
+# Git for Windows runs hooks through its bundled POSIX shell, so this script is
+# shared by Windows and Linux contributors.
+
+repo_root=$(git rev-parse --show-toplevel) || exit 1
+cd "$repo_root" || exit 1
+
+failures=""
+
+run_check() {
+  check_name=$1
+  shift
+
+  printf '\n==> %s\n' "$check_name"
+  if "$@"; then
+    printf '<== %s passed\n' "$check_name"
+  else
+    printf >&2 '<== %s failed\n' "$check_name"
+    if [ -z "$failures" ]; then
+      failures=$check_name
+    else
+      failures="$failures, $check_name"
+    fi
+  fi
+}
+
+# The ignored .tools directory is used by the repository's Windows development
+# environment. Prefer its portable Node installation when present, otherwise
+# use the contributor's normal npm executable from PATH.
+npm_command=npm
+for candidate in .tools/node-*-win-x64/npm.cmd; do
+  if [ -f "$candidate" ]; then
+    npm_command=$candidate
+    node_directory=${candidate%/npm.cmd}
+    PATH="$PWD/$node_directory:$PATH"
+    export PATH
+    break
+  fi
+done
+
+run_check "staged whitespace" git diff --cached --check
+run_check "Rust formatting" cargo fmt --all -- --check
+run_check "Rust lints" cargo clippy --workspace --all-targets --all-features -- -D warnings
+run_check "Rust tests" cargo test --workspace
+run_check "TypeScript" "$npm_command" --prefix frontend run typecheck
+run_check "ESLint" "$npm_command" --prefix frontend run lint
+run_check "frontend tests" "$npm_command" --prefix frontend test
+run_check "frontend production build" "$npm_command" --prefix frontend run build
+
+if [ -n "$failures" ]; then
+  printf >&2 '\nPre-commit checks failed: %s\n' "$failures"
+  printf >&2 'Fix the failures above before committing.\n'
+  exit 1
+fi
+
+printf '\nAll pre-commit checks passed.\n'
