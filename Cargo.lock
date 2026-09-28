@@ -363,6 +363,7 @@ dependencies = [
  "branchcraft-auth",
  "branchcraft-git",
  "branchcraft-github",
+ "branchcraft-hooks",
  "branchcraft-storage",
  "log",
  "secrecy",
@@ -409,6 +410,7 @@ name = "branchcraft-git"
 version = "0.1.0"
 dependencies = [
  "branchcraft-app-core",
+ "branchcraft-hooks",
  "branchcraft-test-support",
  "git2",
  "secrecy",
@@ -427,6 +429,15 @@ dependencies = [
  "serde",
  "thiserror 2.0.21",
  "tokio",
+]
+
+[[package]]
+name = "branchcraft-hooks"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tempfile",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

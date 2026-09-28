@@ -1,0 +1,19 @@
+[package]
+name = "branchcraft-hooks"
+description = "Git hook discovery, execution, and output streaming for Branchcraft"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

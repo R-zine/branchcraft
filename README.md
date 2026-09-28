@@ -6,8 +6,9 @@ built with Rust, Tauri, and React.
 The current implementation completes Milestones 0 through 8: it opens an
 existing local Git repository through a native directory picker, shows its
 working-tree changes, renders the selected file in a Monaco diff editor, stages
-changes, creates commits, browses commit history, and manages local branches
-safely. It fetches, pulls, and pushes local or authenticated GitHub HTTPS
+changes, creates commits with Git hook support and streamed terminal output,
+browses commit history, and manages local branches safely. It fetches, pulls,
+and pushes local or authenticated GitHub HTTPS
 remotes without freezing the UI, with streamed progress and recoverable error
 states. It also signs in to GitHub in the system browser, validates a PKCE and
 state-protected loopback callback, retrieves the current account, and stores
@@ -103,7 +104,8 @@ git config core.hooksPath .githooks
 - Implemented: workspace foundation, Tauri shell, React UI, native folder
   picker, repository opening, current branch, working-tree status, structured
   file diffs, responsive Monaco split/inline viewing, file/all staging and
-  unstaging, commit creation, bounded commit history, local and remote-tracking
+  unstaging, hook-aware commit creation with terminal output, bounded commit
+  history, local and remote-tracking
   branch discovery, branch search, creation, safe switching and deletion,
   browser-based GitHub OAuth, PKCE/state validation, an ephemeral loopback
   callback, current-user display, native credential persistence through Secret

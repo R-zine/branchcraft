@@ -48,6 +48,7 @@ export type GitErrorKind =
   | "conflict"
   | "dirtyWorkingTree"
   | "nothingStaged"
+  | "hookFailed"
   | "missingIdentity"
   | "invalidReference"
   | "branchAlreadyExists"

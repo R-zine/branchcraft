@@ -1,5 +1,6 @@
 import type { CommitService } from "../../services/commitService";
 import type { RepositorySnapshot } from "../../types/repository";
+import { HookTerminal } from "./HookTerminal";
 import { useCommit } from "./useCommit";
 
 interface CommitFormProps {
@@ -24,14 +25,15 @@ export function CommitForm({
     : repository.branch.displayName;
 
   return (
-    <form
-      className="commit-form"
-      aria-label="Create commit"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void state.submit();
-      }}
-    >
+    <>
+      <form
+        className="commit-form"
+        aria-label="Create commit"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void state.submit();
+        }}
+      >
       <div className="commit-heading">
         <strong>Commit</strong>
         <span>{stagedCount} staged</span>
@@ -81,6 +83,8 @@ export function CommitForm({
       >
         {state.committing ? "Committing…" : `Commit to ${branch}`}
       </button>
-    </form>
+      </form>
+      <HookTerminal state={state.hookTerminal} onClose={state.closeHookTerminal} />
+    </>
   );
 }

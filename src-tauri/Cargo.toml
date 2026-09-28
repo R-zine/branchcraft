@@ -25,6 +25,7 @@ branchcraft-app-core = { path = "../crates/app-core" }
 branchcraft-auth = { path = "../crates/auth" }
 branchcraft-git = { path = "../crates/git" }
 branchcraft-github = { path = "../crates/github" }
+branchcraft-hooks = { path = "../crates/hooks" }
 branchcraft-storage = { path = "../crates/storage" }
 log = "0.4.34"
 serde.workspace = true

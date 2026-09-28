@@ -166,6 +166,14 @@ also owns clone-source validation, collision-safe destination derivation, and
 clone progress. It has no IPC, UI, OAuth, or GitHub API knowledge; a caller may
 provide a redacted backend secret to its credential callback.
 
+### `branchcraft-hooks`
+
+Owns Git hook discovery, cross-platform process launch, Git-compatible working
+directory/environment setup, and bounded stdout/stderr streaming. It has no
+libgit2, Tauri, or React dependency. `branchcraft-git` composes it into the
+commit lifecycle, and the desktop adapter forwards its typed events over a
+Tauri channel.
+
 ### `branchcraft-auth`
 
 Owns GitHub OAuth App configuration, per-attempt PKCE and CSRF state, the
@@ -234,7 +242,8 @@ Runtime features never invoke a shell or external Git executable.
 
 - `features/repositories` owns repository loading and header/welcome UI.
 - `features/changes` owns file status, selection, and staging state.
-- `features/commit` owns commit form state and validation.
+- `features/commit` owns commit form state, validation, and the streamed Git
+  hook terminal.
 - `features/diff` owns diff loading, fallbacks, responsive presentation, and
   the Monaco adapter.
 - `features/history` owns bounded history loading and presentation.

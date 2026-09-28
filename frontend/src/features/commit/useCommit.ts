@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CommitService } from "../../services/commitService";
+import type { HookEvent } from "../../types/hooks";
 import type {
   CommitInfo,
   GitError,
@@ -7,16 +8,24 @@ import type {
 } from "../../types/repository";
 import { isGitError } from "../../types/repository";
 
+export interface HookTerminalState {
+  open: boolean;
+  running: boolean;
+  events: HookEvent[];
+}
+
 interface CommitState {
   summary: string;
   description: string;
   committing: boolean;
   error: GitError | null;
   lastCommit: CommitInfo | null;
+  hookTerminal: HookTerminalState;
   setSummary: (value: string) => void;
   setDescription: (value: string) => void;
   submit: () => Promise<void>;
   dismissError: () => void;
+  closeHookTerminal: () => void;
 }
 
 const unknownError: GitError = {
@@ -36,6 +45,11 @@ export function useCommit(
   const [committing, setCommitting] = useState(false);
   const [error, setError] = useState<GitError | null>(null);
   const [lastCommit, setLastCommit] = useState<CommitInfo | null>(null);
+  const [hookTerminal, setHookTerminal] = useState<HookTerminalState>({
+    open: false,
+    running: false,
+    events: [],
+  });
   const active = useRef(true);
   const inFlight = useRef(false);
 
@@ -82,8 +96,23 @@ export function useCommit(
     setCommitting(true);
     setError(null);
     setLastCommit(null);
+    setHookTerminal({ open: false, running: false, events: [] });
+    const onHookEvent = (event: HookEvent) => {
+      if (active.current) {
+        setHookTerminal((current) => ({
+          open: true,
+          running: true,
+          events: [...current.events, event].slice(-1000),
+        }));
+      }
+    };
     try {
-      const result = await service.createCommit(repositoryPath, summary, description);
+      const result = await service.createCommit(
+        repositoryPath,
+        summary,
+        description,
+        onHookEvent,
+      );
       if (active.current) {
         onCommitted(result.repository);
         setLastCommit(result.commit);
@@ -98,6 +127,7 @@ export function useCommit(
       inFlight.current = false;
       if (active.current) {
         setCommitting(false);
+        setHookTerminal((current) => ({ ...current, running: false }));
       }
     }
   };
@@ -108,9 +138,15 @@ export function useCommit(
     committing,
     error,
     lastCommit,
+    hookTerminal,
     setSummary,
     setDescription,
     submit,
     dismissError: () => setError(null),
+    closeHookTerminal: () => {
+      setHookTerminal((current) =>
+        current.running ? current : { ...current, open: false },
+      );
+    },
   };
 }

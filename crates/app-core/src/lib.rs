@@ -408,6 +408,7 @@ pub enum GitErrorKind {
     Conflict,
     DirtyWorkingTree,
     NothingStaged,
+    HookFailed,
     MissingIdentity,
     InvalidReference,
     BranchAlreadyExists,

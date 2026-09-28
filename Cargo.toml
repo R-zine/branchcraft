@@ -5,6 +5,7 @@ members = [
     "crates/auth",
     "crates/git",
     "crates/github",
+    "crates/hooks",
     "crates/storage",
     "crates/test-support",
     "src-tauri",

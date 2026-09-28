@@ -1,7 +1,10 @@
 use super::{canonical_directory, changed_files, map_open_error, validate_relative_path};
 use branchcraft_app_core::{CommitInfo, FileStatus, GitError, GitErrorKind};
+use branchcraft_hooks::{GitHook, HookError, HookErrorKind, HookEvent, HookRunner};
 use git2::{ErrorCode, Index, ObjectType, Repository};
-use std::{io, path::Path};
+use std::{fs, io, path::Path};
+
+const MAX_COMMIT_MESSAGE_BYTES: u64 = 1024 * 1024;
 
 pub(super) fn stage_file(repository_path: &Path, file_path: &str) -> Result<(), GitError> {
     let repository = open_repository(repository_path)?;
@@ -73,6 +76,7 @@ pub(super) fn commit(
     repository_path: &Path,
     summary: &str,
     description: Option<&str>,
+    on_hook_event: &mut dyn FnMut(HookEvent),
 ) -> Result<CommitInfo, GitError> {
     let summary = summary.trim();
     if summary.is_empty() {
@@ -103,16 +107,10 @@ pub(super) fn commit(
     }
 
     let repository = open_repository(repository_path)?;
-    let mut index = repository.index().map_err(|error| map_git_error(&error))?;
-    if index.has_conflicts() {
-        return Err(GitError::new(
-            GitErrorKind::Conflict,
-            "Resolve conflicts before committing.",
-            Some("The repository index still contains unresolved files.".to_owned()),
-        ));
-    }
-    ensure_staged_changes(&repository, &index)?;
-
+    let worktree = repository
+        .workdir()
+        .ok_or_else(unsupported_bare_repository)?;
+    validate_commit_index(&repository)?;
     let signature = repository.signature().map_err(|_| {
         GitError::new(
             GitErrorKind::MissingIdentity,
@@ -124,6 +122,36 @@ pub(super) fn commit(
         )
     })?;
 
+    let configured_hooks_path = repository
+        .config()
+        .ok()
+        .and_then(|config| config.get_path("core.hooksPath").ok());
+    let hooks = HookRunner::new(
+        worktree,
+        repository.path(),
+        configured_hooks_path.as_deref(),
+    );
+    hooks
+        .run(GitHook::PreCommit, &[], on_hook_event)
+        .map_err(|error| map_hook_error(&error))?;
+
+    let message =
+        description.map_or_else(|| summary.to_owned(), |body| format!("{summary}\n\n{body}"));
+    let message_path = repository.path().join("COMMIT_EDITMSG");
+    fs::write(&message_path, message).map_err(|error| commit_message_io_error(&error))?;
+    hooks
+        .run(
+            GitHook::PrepareCommitMsg,
+            &[message_path.as_path(), Path::new("message")],
+            on_hook_event,
+        )
+        .map_err(|error| map_hook_error(&error))?;
+    hooks
+        .run(GitHook::CommitMsg, &[message_path.as_path()], on_hook_event)
+        .map_err(|error| map_hook_error(&error))?;
+    let (message, committed_summary) = read_hook_commit_message(&message_path)?;
+
+    let mut index = validate_commit_index(&repository)?;
     let tree_id = index.write_tree().map_err(|error| map_git_error(&error))?;
     let tree = repository
         .find_tree(tree_id)
@@ -133,8 +161,6 @@ pub(super) fn commit(
         .ok()
         .and_then(|head| head.peel_to_commit().ok());
     let parents = parent.iter().collect::<Vec<_>>();
-    let message =
-        description.map_or_else(|| summary.to_owned(), |body| format!("{summary}\n\n{body}"));
     let oid = repository
         .commit(
             Some("HEAD"),
@@ -147,11 +173,93 @@ pub(super) fn commit(
         .map_err(|error| map_git_error(&error))?;
     let id = oid.to_string();
 
+    // Git treats post-commit as informational: its failure cannot undo the
+    // commit that was already written. The failure event remains visible in
+    // the hook terminal for the user to diagnose.
+    let _ = hooks.run(GitHook::PostCommit, &[], on_hook_event);
+
     Ok(CommitInfo {
         short_id: id.chars().take(8).collect(),
         id,
-        summary: summary.to_owned(),
+        summary: committed_summary,
     })
+}
+
+fn validate_commit_index(repository: &Repository) -> Result<Index, GitError> {
+    let index = repository.index().map_err(|error| map_git_error(&error))?;
+    if index.has_conflicts() {
+        return Err(GitError::new(
+            GitErrorKind::Conflict,
+            "Resolve conflicts before committing.",
+            Some("The repository index still contains unresolved files.".to_owned()),
+        ));
+    }
+    ensure_staged_changes(repository, &index)?;
+    Ok(index)
+}
+
+fn read_hook_commit_message(path: &Path) -> Result<(String, String), GitError> {
+    let metadata = path
+        .metadata()
+        .map_err(|error| commit_message_io_error(&error))?;
+    if metadata.len() > MAX_COMMIT_MESSAGE_BYTES {
+        return Err(GitError::new(
+            GitErrorKind::HookFailed,
+            "A Git hook produced an oversized commit message.",
+            Some("Keep the commit message below 1 MiB and try again.".to_owned()),
+        ));
+    }
+    let message = fs::read_to_string(path).map_err(|error| commit_message_io_error(&error))?;
+    if message.contains('\0') {
+        return Err(GitError::new(
+            GitErrorKind::HookFailed,
+            "A Git hook produced an invalid commit message.",
+            Some("Commit messages cannot contain null bytes.".to_owned()),
+        ));
+    }
+    let summary = message.lines().next().map(str::trim).unwrap_or_default();
+    if summary.is_empty() {
+        return Err(GitError::new(
+            GitErrorKind::HookFailed,
+            "A Git hook removed the commit summary.",
+            Some("Update the hook so it leaves a non-empty first line.".to_owned()),
+        ));
+    }
+    let summary = summary.to_owned();
+    Ok((message, summary))
+}
+
+fn map_hook_error(error: &HookError) -> GitError {
+    let detail = match error.kind {
+        HookErrorKind::Rejected => error.exit_code.map_or_else(
+            || "Review the hook output, then try the commit again.".to_owned(),
+            |code| format!("The hook exited with code {code}. Review its output and try again."),
+        ),
+        HookErrorKind::Start => {
+            "Check that the hook is executable and its interpreter is installed.".to_owned()
+        }
+        HookErrorKind::Output => {
+            "Branchcraft could not capture all output from the hook.".to_owned()
+        }
+    };
+    GitError::new(
+        GitErrorKind::HookFailed,
+        format!("The {} hook stopped the commit.", error.hook.display_name()),
+        Some(detail),
+    )
+}
+
+fn commit_message_io_error(error: &io::Error) -> GitError {
+    let kind = if error.kind() == io::ErrorKind::PermissionDenied {
+        GitErrorKind::PermissionDenied
+    } else {
+        GitErrorKind::HookFailed
+    };
+    GitError::new(
+        kind,
+        "Branchcraft could not prepare the commit message for Git hooks.",
+        Some("Check the repository metadata permissions and try again.".to_owned()),
+    )
 }
 
 fn open_repository(path: &Path) -> Result<Repository, GitError> {
@@ -282,7 +390,22 @@ fn map_io_error(error: &io::Error) -> GitError {
 mod tests {
     use crate::{GitService, LibGitService};
     use branchcraft_app_core::{ChangeKind, GitErrorKind};
+    use branchcraft_hooks::{GitHook, HookEventKind};
     use branchcraft_test_support::TestRepository;
+    use std::fs;
+
+    fn write_hook(repository: &TestRepository, name: &str, body: &str) {
+        let path = repository.path().join(".git").join("hooks").join(name);
+        fs::write(&path, format!("#!/bin/sh\n{body}\n")).expect("write hook");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+
+            let mut permissions = path.metadata().expect("hook metadata").permissions();
+            permissions.set_mode(0o755);
+            fs::set_permissions(path, permissions).expect("hook permissions");
+        }
+    }
 
     #[test]
     fn stages_and_unstages_one_file_without_changing_the_worktree() {
@@ -365,6 +488,7 @@ mod tests {
                 repository.path(),
                 "Update README",
                 Some("Explain the local change."),
+                &mut |_| {},
             )
             .expect("create commit");
 
@@ -378,6 +502,91 @@ mod tests {
     }
 
     #[test]
+    fn commit_msg_hook_can_update_the_message_and_stream_output() {
+        let repository = TestRepository::with_initial_commit();
+        repository.configure_identity("Branchcraft User", "user@branchcraft.local");
+        repository.write("README.md", "hooked\n");
+        repository.stage("README.md");
+        write_hook(
+            &repository,
+            "commit-msg",
+            "printf 'Hooked summary\\n\\nChanged by hook.\\n' > \"$1\"\nprintf 'message updated\\n'",
+        );
+        let mut events = Vec::new();
+
+        let result = LibGitService::new()
+            .commit(repository.path(), "Original summary", None, &mut |event| {
+                events.push(event);
+            })
+            .expect("hooked commit");
+
+        assert_eq!(result.commit.summary, "Hooked summary");
+        assert_eq!(
+            repository.head_message(),
+            "Hooked summary\n\nChanged by hook.\n"
+        );
+        assert!(events.iter().any(|event| {
+            event.hook == GitHook::CommitMsg && event.kind == HookEventKind::Stdout
+        }));
+    }
+
+    #[test]
+    fn rejecting_pre_commit_hook_prevents_the_commit() {
+        let repository = TestRepository::with_initial_commit();
+        repository.configure_identity("Branchcraft User", "user@branchcraft.local");
+        repository.write("README.md", "rejected\n");
+        repository.stage("README.md");
+        write_hook(
+            &repository,
+            "pre-commit",
+            "printf 'quality gate failed\\n' >&2\nexit 9",
+        );
+        let mut events = Vec::new();
+
+        let error = LibGitService::new()
+            .commit(repository.path(), "Rejected commit", None, &mut |event| {
+                events.push(event);
+            })
+            .expect_err("pre-commit rejection");
+
+        assert_eq!(error.kind, GitErrorKind::HookFailed);
+        assert_eq!(repository.head_message(), "Initial commit");
+        assert_eq!(
+            events.last().map(|event| (event.hook, event.kind)),
+            Some((GitHook::PreCommit, HookEventKind::Failed))
+        );
+    }
+
+    #[test]
+    fn failing_post_commit_hook_does_not_undo_the_commit() {
+        let repository = TestRepository::with_initial_commit();
+        repository.configure_identity("Branchcraft User", "user@branchcraft.local");
+        repository.write("README.md", "committed\n");
+        repository.stage("README.md");
+        write_hook(
+            &repository,
+            "post-commit",
+            "printf 'notify failed\\n' >&2\nexit 5",
+        );
+        let mut events = Vec::new();
+
+        let result = LibGitService::new()
+            .commit(
+                repository.path(),
+                "Committed despite notification",
+                None,
+                &mut |event| events.push(event),
+            )
+            .expect("post-commit cannot reject commit");
+
+        assert_eq!(result.commit.summary, "Committed despite notification");
+        assert_eq!(
+            events.last().map(|event| (event.hook, event.kind)),
+            Some((GitHook::PostCommit, HookEventKind::Failed))
+        );
+    }
+
+    #[test]
     fn commit_preserves_unstaged_changes() {
         let repository = TestRepository::with_initial_commit();
         repository.configure_identity("Branchcraft User", "user@branchcraft.local");
@@ -386,7 +595,12 @@ mod tests {
         repository.write("README.md", "still unstaged\n");
 
         let result = LibGitService::new()
-            .commit(repository.path(), "Commit staged content", None)
+            .commit(
+                repository.path(),
+                "Commit staged content",
+                None,
+                &mut |_| {},
+            )
             .expect("create commit");
         let file = result
             .repository
@@ -411,7 +625,7 @@ mod tests {
             .expect("stage initial file");
 
         let result = service
-            .commit(repository.path(), "Initial commit", None)
+            .commit(repository.path(), "Initial commit", None, &mut |_| {})
             .expect("create initial commit");
 
         assert_eq!(result.commit.summary, "Initial commit");
@@ -425,18 +639,18 @@ mod tests {
         let service = LibGitService::new();
 
         let empty = service
-            .commit(repository.path(), "   ", None)
+            .commit(repository.path(), "   ", None, &mut |_| {})
             .expect_err("empty summary must fail");
         assert_eq!(empty.kind, GitErrorKind::InvalidInput);
 
         let multiline = service
-            .commit(repository.path(), "summary\nbody", None)
+            .commit(repository.path(), "summary\nbody", None, &mut |_| {})
             .expect_err("multiline summary must fail");
         assert_eq!(multiline.kind, GitErrorKind::InvalidInput);
 
         repository.configure_identity("Branchcraft User", "user@branchcraft.local");
         let nothing = service
-            .commit(repository.path(), "No changes", None)
+            .commit(repository.path(), "No changes", None, &mut |_| {})
             .expect_err("nothing staged must fail");
         assert_eq!(nothing.kind, GitErrorKind::NothingStaged);
 
@@ -444,7 +658,7 @@ mod tests {
         repository.stage("README.md");
         repository.clear_identity();
         let identity = service
-            .commit(repository.path(), "Needs identity", None)
+            .commit(repository.path(), "Needs identity", None, &mut |_| {})
             .expect_err("missing identity must fail");
         assert_eq!(identity.kind, GitErrorKind::MissingIdentity);
     }

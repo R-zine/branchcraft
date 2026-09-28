@@ -11,6 +11,7 @@ Ownership is intentionally split by directory:
 | Authentication | `crates/auth` | OAuth/PKCE lifecycle and backend-only session access |
 | Persistence | `crates/storage` | Secret Service/Windows Credential Manager plus non-secret JSON settings |
 | GitHub HTTP API | `crates/github` | GitHub-specific HTTP operations; no local Git behavior |
+| Git hook runtime | `crates/hooks` | Hook discovery, process execution, and bounded output streaming |
 | Git behavior | `crates/git` | `GitService`; no Tauri or React dependencies |
 | Desktop adapter | `src-tauri` | Thin commands and native plugins only |
 | Frontend features | `frontend/src/features` | Feature-local UI and state |

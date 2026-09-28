@@ -1351,6 +1351,201 @@ button:focus-visible {
   cursor: wait;
 }
 
+.hook-terminal-backdrop {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(5 8 12 / 72%);
+  backdrop-filter: blur(3px);
+}
+
+.hook-terminal {
+  display: grid;
+  width: min(780px, calc(100vw - 48px));
+  height: min(540px, calc(100vh - 48px));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: #0b0e12;
+  box-shadow: 0 28px 90px rgb(0 0 0 / 55%);
+  color: #dce4ee;
+}
+
+.hook-terminal > header {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 15px;
+  border-bottom: 1px solid #29313b;
+  background: #12171d;
+}
+
+.hook-terminal > header > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hook-terminal > header h2 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.hook-terminal > header div div > span {
+  display: block;
+  margin-top: 2px;
+  color: #8995a4;
+  font-size: 9px;
+}
+
+.hook-terminal-indicator {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 3px rgb(112 196 143 / 12%);
+}
+
+.hook-terminal-indicator.running {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgb(95 200 191 / 12%);
+  animation: hook-pulse 1.2s ease-in-out infinite;
+}
+
+.hook-terminal-indicator.failed {
+  background: var(--danger);
+  box-shadow: 0 0 0 3px rgb(240 113 120 / 12%);
+}
+
+.hook-terminal > header button {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #8995a4;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.hook-terminal > header button:hover:not(:disabled) {
+  border-color: #384452;
+  background: #1b222b;
+  color: #fff;
+}
+
+.hook-terminal > header button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.hook-terminal-output {
+  overflow: auto;
+  padding: 15px 17px;
+  background:
+    linear-gradient(rgb(255 255 255 / 1.5%) 1px, transparent 1px) 0 0 / 100% 22px,
+    #0b0e12;
+  color: #dce4ee;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  overscroll-behavior: contain;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.hook-terminal-output:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.hook-terminal-output > span {
+  white-space: pre-wrap;
+}
+
+.hook-output-started {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.hook-output-stderr,
+.hook-output-failed {
+  color: #ff9ca5;
+}
+
+.hook-output-succeeded {
+  color: #8bd5a5;
+}
+
+.hook-terminal-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  margin-left: 2px;
+  background: var(--accent);
+  vertical-align: -2px;
+  animation: hook-cursor 0.85s steps(1) infinite;
+}
+
+.hook-terminal > footer {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 14px 0 17px;
+  border-top: 1px solid #29313b;
+  background: #12171d;
+}
+
+.hook-terminal > footer span {
+  color: #788493;
+  font-size: 8.5px;
+}
+
+.hook-terminal > footer button {
+  min-width: 78px;
+  min-height: 29px;
+  border: 1px solid #384452;
+  border-radius: 5px;
+  background: #1b222b;
+  color: #dce4ee;
+  font-size: 9px;
+  font-weight: 680;
+  cursor: pointer;
+}
+
+.hook-terminal > footer button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.hook-terminal > footer button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+@keyframes hook-pulse {
+  50% {
+    opacity: 0.5;
+    transform: scale(0.82);
+  }
+}
+
+@keyframes hook-cursor {
+  50% {
+    opacity: 0;
+  }
+}
+
 .history-panel {
   display: flex;
   min-height: 0;
@@ -2966,6 +3161,13 @@ kbd {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .hook-terminal-indicator.running,
+  .hook-terminal-cursor {
+    animation: none;
+  }
+}
+
 @media (max-width: 780px) {
   .wordmark {
     width: auto;
@@ -3006,6 +3208,11 @@ kbd {
   .settings-panel {
     width: calc(100vw - 28px);
     max-height: calc(100vh - 28px);
+  }
+
+  .hook-terminal {
+    width: calc(100vw - 28px);
+    height: calc(100vh - 28px);
   }
 
   .shortcut-list {

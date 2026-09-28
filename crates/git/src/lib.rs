@@ -12,6 +12,7 @@ use branchcraft_app_core::{
     CommitResult, Diff, FileStatus, GitError, GitErrorKind, RemoteInfo, RemoteOperationResult,
     RemoteProgress, RepositoryId, RepositorySnapshot,
 };
+use branchcraft_hooks::HookEvent;
 use git2::{ErrorClass, ErrorCode, Repository, Status, StatusOptions};
 use secrecy::SecretString;
 use std::path::{Component, PathBuf};
@@ -86,6 +87,7 @@ pub trait GitService: Send + Sync {
         path: &Path,
         summary: &str,
         description: Option<&str>,
+        on_hook_event: &mut dyn FnMut(HookEvent),
     ) -> Result<CommitResult, GitError>;
 
     /// Returns a bounded history reachable from the current `HEAD`.
@@ -296,8 +298,9 @@ impl GitService for LibGitService {
         path: &Path,
         summary: &str,
         description: Option<&str>,
+        on_hook_event: &mut dyn FnMut(HookEvent),
     ) -> Result<CommitResult, GitError> {
-        let commit = mutations::commit(path, summary, description)?;
+        let commit = mutations::commit(path, summary, description, on_hook_event)?;
         Ok(CommitResult {
             commit,
             repository: Self::snapshot(path)?,
