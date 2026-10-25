@@ -3,6 +3,16 @@
 Milestone 8 reviewed the UI, IPC, Git workers, network clients, and release
 artifacts for unbounded or startup-sensitive work.
 
+## Milestone status
+
+- **Windows 11: complete.** Version 0.1.0 was built, installed, launched,
+  exercised, restarted, and uninstalled in a clean Windows 11 QEMU guest on
+  2026-10-25. The release record is in the
+  [Windows smoke-test document](testing/windows-smoke-test.md#milestone-8-verification-2026-10-25).
+- **Fedora Linux: validation pending.** The implementation and packaging assets
+  remain in place, but the native Linux release checklist is intentionally
+  deferred.
+
 ## Current safeguards
 
 - Filesystem and libgit2 work runs on blocking Rust workers; GitHub HTTP and
