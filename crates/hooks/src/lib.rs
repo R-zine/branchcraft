@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::{
-    io::{self, Read},
+    io::Read,
     path::{Path, PathBuf},
     process::{Child, Command, ExitStatus, Stdio},
     sync::mpsc,
@@ -11,7 +11,7 @@ use std::{
 use thiserror::Error;
 
 #[cfg(windows)]
-use std::{ffi::OsString, fs};
+use std::{ffi::OsString, fs, io};
 
 const OUTPUT_CHUNK_BYTES: usize = 4 * 1024;
 const MAX_OUTPUT_BYTES: usize = 1024 * 1024;
@@ -156,6 +156,9 @@ impl HookRunner {
         }
 
         on_event(HookEvent::lifecycle(hook, HookEventKind::Started, None));
+        #[cfg(unix)]
+        let mut command = command_for_hook(&hook_path);
+        #[cfg(windows)]
         let mut command = command_for_hook(&hook_path).map_err(|_| {
             on_event(HookEvent::output(
                 hook,
@@ -364,8 +367,8 @@ fn is_runnable_hook(path: &Path) -> bool {
 }
 
 #[cfg(unix)]
-fn command_for_hook(path: &Path) -> io::Result<Command> {
-    Ok(Command::new(path))
+fn command_for_hook(path: &Path) -> Command {
+    Command::new(path)
 }
 
 #[cfg(windows)]
