@@ -1078,7 +1078,7 @@ mod tests {
 
         assert_eq!(result.outcome, RemoteOutcome::Merged);
         assert_eq!(result.remote.behind, 0);
-        assert!(result.repository.files.is_empty());
+        assert_eq!(result.repository.files, Vec::new());
         let client = Repository::open(&fixture.client_path).expect("client repository");
         assert_eq!(
             client

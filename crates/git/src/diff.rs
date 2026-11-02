@@ -501,7 +501,7 @@ mod tests {
         assert_eq!(diff.file.preview_status, DiffPreviewStatus::Binary);
         assert!(diff.file.old_content.is_none());
         assert!(diff.file.new_content.is_none());
-        assert!(diff.hunks.is_empty());
+        assert_eq!(diff.hunks, Vec::new());
     }
 
     #[test]
@@ -529,7 +529,7 @@ mod tests {
             .expect("whitespace diff");
 
         assert_eq!(diff.file.new_content.as_deref(), Some("# Fixture  \n"));
-        assert!(!diff.hunks.is_empty());
+        assert_ne!(diff.hunks, Vec::new());
     }
 
     #[test]

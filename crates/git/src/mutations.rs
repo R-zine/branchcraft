@@ -494,7 +494,7 @@ mod tests {
 
         assert_eq!(result.commit.summary, "Update README");
         assert_eq!(result.commit.short_id.len(), 8);
-        assert!(result.repository.files.is_empty());
+        assert_eq!(result.repository.files, Vec::new());
         assert_eq!(
             repository.head_message(),
             "Update README\n\nExplain the local change."
@@ -630,7 +630,7 @@ mod tests {
 
         assert_eq!(result.commit.summary, "Initial commit");
         assert!(!result.repository.branch.unborn);
-        assert!(result.repository.files.is_empty());
+        assert_eq!(result.repository.files, Vec::new());
     }
 
     #[test]

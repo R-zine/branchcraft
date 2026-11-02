@@ -487,7 +487,7 @@ mod tests {
             .expect("missing hook is optional");
 
         assert_eq!(outcome, HookOutcome::NotPresent);
-        assert!(events.is_empty());
+        assert_eq!(events, Vec::<HookEvent>::new());
     }
 
     #[test]

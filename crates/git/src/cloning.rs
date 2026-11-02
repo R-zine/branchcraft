@@ -348,7 +348,7 @@ mod tests {
         .expect("local clone");
         let snapshot = LibGitService::snapshot(&destination).expect("cloned snapshot");
 
-        assert!(snapshot.files.is_empty());
+        assert_eq!(snapshot.files, Vec::new());
         assert!(destination.join("README.md").is_file());
         assert!(
             events

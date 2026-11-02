@@ -50,7 +50,7 @@
       "rpm": {
         "release": "1",
         "files": {
-          "../packaging/io.github.username.Branchcraft.metainfo.xml": "/usr/share/metainfo/io.github.username.Branchcraft.metainfo.xml"
+          "/usr/share/metainfo/io.github.username.Branchcraft.metainfo.xml": "../packaging/io.github.username.Branchcraft.metainfo.xml"
         }
       }
     },

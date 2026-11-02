@@ -646,7 +646,7 @@ mod tests {
         assert_eq!(snapshot.path, repository.path().canonicalize().unwrap());
         assert!(!snapshot.branch.detached);
         assert!(!snapshot.branch.unborn);
-        assert!(snapshot.files.is_empty());
+        assert_eq!(snapshot.files, Vec::new());
     }
 
     #[test]
@@ -710,7 +710,7 @@ mod tests {
             .expect("open empty repository");
 
         assert!(snapshot.branch.unborn);
-        assert!(snapshot.files.is_empty());
+        assert_eq!(snapshot.files, Vec::new());
     }
 
     #[test]

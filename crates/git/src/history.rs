@@ -113,12 +113,12 @@ mod tests {
     #[test]
     fn empty_and_detached_repositories_have_stable_history() {
         let empty = TestRepository::empty();
-        assert!(
+        assert_eq!(
             LibGitService::new()
                 .history(empty.path())
                 .expect("empty history")
-                .commits
-                .is_empty()
+                .commits,
+            Vec::new()
         );
 
         let detached = TestRepository::with_initial_commit();

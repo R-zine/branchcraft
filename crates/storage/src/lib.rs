@@ -500,12 +500,12 @@ mod settings_tests {
             .expect("remove recent");
         assert_eq!(settings.recent_repositories.len(), 1);
         assert_eq!(settings.recent_repositories[0].name, "second");
-        assert!(
+        assert_eq!(
             store
                 .clear_recent_repositories()
                 .expect("clear recents")
-                .recent_repositories
-                .is_empty()
+                .recent_repositories,
+            Vec::new()
         );
 
         store.set_theme(ThemePreference::Dark).expect("dark theme");
